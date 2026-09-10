@@ -77,6 +77,7 @@ class AudioEngine {
   private decodeGeneration = 0;
 
   private hasEndedFired = false;
+  private isRestarting = false;
   private onTimeUpdateCbs: Set<(currentTime: number, duration: number) => void> = new Set();
   private onTrackEndedCbs: Set<() => void> = new Set();
   private onPlayStateChangeCbs: Set<(isPlaying: boolean) => void> = new Set();
@@ -105,14 +106,14 @@ class AudioEngine {
       this.syncPositionState();
 
       // Guard fallback: if playback reached the end and ended hasn't fired yet
-      if (dur > 0 && cur >= dur && !this.audioElement.paused && !this.hasEndedFired) {
+      if (dur > 0 && cur >= dur - 0.05 && !this.audioElement.paused && !this.hasEndedFired && !this.isRestarting) {
         this.hasEndedFired = true;
         this.onTrackEndedCbs.forEach((cb) => cb());
       }
     });
 
     this.audioElement.addEventListener('ended', () => {
-      if (this.hasEndedFired) return;
+      if (this.hasEndedFired || this.isRestarting) return;
       this.hasEndedFired = true;
       this.onTrackEndedCbs.forEach((cb) => cb());
     });
@@ -172,6 +173,7 @@ class AudioEngine {
     this.currentTrack = track;
     this.currentCents = track.pitchCents;
     this.hasEndedFired = false;
+    this.isRestarting = false;
     this.audioElement.loop = false;
     this.disablePitchPreservation();
 
@@ -231,6 +233,7 @@ class AudioEngine {
   }
 
   public async restart() {
+    this.isRestarting = true;
     this.hasEndedFired = false;
     this.audioElement.loop = false;
     audioFeatureTimeline.notifySeek(0);
@@ -240,28 +243,65 @@ class AudioEngine {
       this.setPlaybackRateFromCents(this.currentTrack.pitchCents);
     }
 
-    // Attempt 1: Direct seek to 0 and play
+    // Helper: apply pitch settings and play
+    const finishAndPlay = async () => {
+      this.disablePitchPreservation();
+      if (this.currentTrack) {
+        this.setPlaybackRateFromCents(this.currentTrack.pitchCents);
+      }
+      this.isRestarting = false;
+      try {
+        await this.audioElement.play();
+        this.syncPositionState(true);
+      } catch (err) {
+        console.warn('restart play() failed:', err);
+      }
+    };
+
+    // Attempt 1: Direct seek + play (works on Chrome/Firefox/desktop Safari)
     try {
       this.audioElement.currentTime = 0;
       await this.audioElement.play();
+
+      // Verify playback actually started — iOS Safari can silently resolve play()
+      // but leave the element paused/ended after a blob URL finishes.
+      await new Promise((r) => setTimeout(r, 50));
+      if (this.audioElement.paused || this.audioElement.ended) {
+        throw new Error('play() resolved but audio is not playing');
+      }
+
+      this.isRestarting = false;
       this.syncPositionState(true);
       return;
-    } catch (err) {
-      console.warn('Direct restart play failed, attempting reload replay:', err);
+    } catch {
+      // Simple path failed — fall through to src reload
+      this.isRestarting = true;
     }
 
-    // Attempt 2: Re-assign src and play (resets AVPlayer pipeline on iOS Safari)
-    try {
-      if (this.currentTrack) {
-        this.audioElement.src = this.currentTrack.objectUrl;
-        this.audioElement.currentTime = 0;
-        this.disablePitchPreservation();
-        this.setPlaybackRateFromCents(this.currentTrack.pitchCents);
-      }
-      await this.audioElement.play();
-      this.syncPositionState(true);
-    } catch (err2) {
-      console.warn('Fallback replay failed:', err2);
+    // Attempt 2: Reload src to reset iOS Safari AVPlayer pipeline for blob URLs.
+    // After 'ended', the blob data reference can be released, making the previous
+    // src unusable. Re-assigning it forces a fresh decode pipeline.
+    if (this.currentTrack) {
+      const readyPromise = new Promise<void>((resolve) => {
+        let resolved = false;
+        const done = () => {
+          if (resolved) return;
+          resolved = true;
+          this.audioElement.removeEventListener('canplay', done);
+          resolve();
+        };
+        this.audioElement.addEventListener('canplay', done, { once: true });
+        // Timeout: if canplay never fires (e.g. blob was revoked), proceed anyway
+        setTimeout(done, 2000);
+      });
+
+      this.audioElement.src = this.currentTrack.objectUrl;
+      this.audioElement.currentTime = 0;
+
+      await readyPromise;
+      await finishAndPlay();
+    } else {
+      this.isRestarting = false;
     }
   }
 
