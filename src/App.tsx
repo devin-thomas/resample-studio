@@ -255,6 +255,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isChillMode]);
 
+  // Synchronize audio element native loop mode for gapless single-track / 1-track repeat
+  useEffect(() => {
+    const shouldLoop = repeatMode === 'one' || (repeatMode === 'all' && tracks.length === 1);
+    audioEngine.setLoop(shouldLoop);
+  }, [repeatMode, tracks.length]);
+
   // Previous Track
   const handlePrevTrack = useCallback(() => {
     if (tracks.length === 0) return;
@@ -274,6 +280,10 @@ export default function App() {
     }
 
     const prevIdx = curIdx > 0 ? curIdx - 1 : tracks.length - 1;
+    if (tracks[prevIdx].id === activeTrackId) {
+      audioEngine.restart();
+      return;
+    }
     setActiveTrackId(tracks[prevIdx].id);
   }, [tracks, activeTrackId, playback.currentTime, isShuffle]);
 
@@ -290,6 +300,10 @@ export default function App() {
     }
 
     const nextIdx = curIdx < tracks.length - 1 ? curIdx + 1 : 0;
+    if (tracks[nextIdx].id === activeTrackId) {
+      audioEngine.restart();
+      return;
+    }
     setActiveTrackId(tracks[nextIdx].id);
   }, [tracks, activeTrackId, isShuffle]);
 
@@ -299,8 +313,7 @@ export default function App() {
 
     if (repeatMode === 'one') {
       // Repeat One: Loop the single track continuously
-      audioEngine.seek(0);
-      audioEngine.play();
+      audioEngine.restart();
       return;
     }
 
@@ -309,8 +322,7 @@ export default function App() {
     if (isShuffle) {
       if (tracks.length === 1) {
         if (repeatMode === 'all') {
-          audioEngine.seek(0);
-          audioEngine.play();
+          audioEngine.restart();
         } else {
           audioEngine.pause();
           audioEngine.seek(0);
@@ -332,8 +344,12 @@ export default function App() {
       // End of playlist reached
       if (repeatMode === 'all') {
         // Repeat All (Default): Loop back to track 0 and auto-play
-        autoPlayNextRef.current = true;
-        setActiveTrackId(tracks[0].id);
+        if (tracks.length === 1 || tracks[0].id === activeTrackId) {
+          audioEngine.restart();
+        } else {
+          autoPlayNextRef.current = true;
+          setActiveTrackId(tracks[0].id);
+        }
       } else {
         // Repeat None: Stop playback at end of playlist
         audioEngine.pause();

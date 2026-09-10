@@ -220,10 +220,16 @@ class AudioEngine {
   public restart() {
     this.audioElement.currentTime = 0;
     audioFeatureTimeline.notifySeek(0);
-    if (this.audioElement.paused) {
-      this.play();
-    }
+    this.play();
     this.syncPositionState(true);
+  }
+
+  public setLoop(loop: boolean) {
+    this.audioElement.loop = loop;
+  }
+
+  public getLoop(): boolean {
+    return this.audioElement.loop;
   }
 
   public seek(timeSeconds: number) {
