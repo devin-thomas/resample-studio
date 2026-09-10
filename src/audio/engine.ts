@@ -77,6 +77,8 @@ class AudioEngine {
   private onTimeUpdateCbs: Set<(currentTime: number, duration: number) => void> = new Set();
   private onTrackEndedCbs: Set<() => void> = new Set();
   private onPlayStateChangeCbs: Set<(isPlaying: boolean) => void> = new Set();
+  private onNextTrackHandler: (() => void) | null = null;
+  private onPrevTrackHandler: (() => void) | null = null;
 
   constructor() {
     this.audioElement = document.createElement('audio');
@@ -326,6 +328,31 @@ class AudioEngine {
     return () => this.onPlayStateChangeCbs.delete(cb);
   }
 
+  public setMediaSessionActionHandlers(handlers: {
+    onNext?: () => void;
+    onPrev?: () => void;
+  }) {
+    if (handlers.onNext) this.onNextTrackHandler = handlers.onNext;
+    if (handlers.onPrev) this.onPrevTrackHandler = handlers.onPrev;
+    this.bindMediaSessionTrackHandlers();
+  }
+
+  private bindMediaSessionTrackHandlers() {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+    try {
+      if (this.onNextTrackHandler) {
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          this.onNextTrackHandler?.();
+        });
+      }
+      if (this.onPrevTrackHandler) {
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          this.onPrevTrackHandler?.();
+        });
+      }
+    } catch {}
+  }
+
   // iOS MediaSession integration for Dynamic Island / Lock Screen
   private setupMediaSession(track: Track) {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
@@ -335,18 +362,13 @@ class AudioEngine {
 
     navigator.mediaSession.setActionHandler('play', () => this.play());
     navigator.mediaSession.setActionHandler('pause', () => this.pause());
-    navigator.mediaSession.setActionHandler('previoustrack', () => this.restart());
     navigator.mediaSession.setActionHandler('seekto', (details) => {
       if (details.seekTime !== undefined) {
         this.seek(details.seekTime);
       }
     });
 
-    try {
-      navigator.mediaSession.setActionHandler('nexttrack', null);
-      navigator.mediaSession.setActionHandler('seekforward', null);
-    } catch {}
-
+    this.bindMediaSessionTrackHandlers();
     this.syncPositionState(true);
   }
 

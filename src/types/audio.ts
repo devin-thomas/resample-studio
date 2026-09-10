@@ -27,6 +27,8 @@ export interface KnobSettings {
   advancedMaxSpeed: number;// 100.0 to 400.0
 }
 
+export type RepeatMode = 'all' | 'one' | 'none';
+
 export interface PlaybackState {
   isPlaying: boolean;
   currentTime: number;
@@ -34,4 +36,7 @@ export interface PlaybackState {
   activeTrackId: string | null;
   volume: number;
   isMuted: boolean;
+  repeatMode: RepeatMode;
+  isShuffle: boolean;
+  isChillMode: boolean;
 }

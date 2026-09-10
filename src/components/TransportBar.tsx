@@ -1,5 +1,5 @@
 import React from 'react';
-import { Track } from '../types/audio';
+import { Track, RepeatMode } from '../types/audio';
 import { formatTime } from '../audio/resampleMath';
 import {
   Play,
@@ -8,6 +8,11 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
+  Shuffle,
+  Repeat,
+  Repeat1,
+  Moon,
+  Minimize2,
 } from 'lucide-react';
 
 interface TransportBarProps {
@@ -17,9 +22,15 @@ interface TransportBarProps {
   duration: number;
   volume: number;
   isMuted: boolean;
+  repeatMode: RepeatMode;
+  isShuffle: boolean;
+  isChillMode: boolean;
   onTogglePlay: () => void;
   onPrevTrack: () => void;
   onNextTrack: () => void;
+  onToggleRepeat: () => void;
+  onToggleShuffle: () => void;
+  onToggleChillMode: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (vol: number) => void;
   onToggleMute: () => void;
@@ -32,9 +43,15 @@ export const TransportBar: React.FC<TransportBarProps> = ({
   duration,
   volume,
   isMuted,
+  repeatMode,
+  isShuffle,
+  isChillMode,
   onTogglePlay,
   onPrevTrack,
   onNextTrack,
+  onToggleRepeat,
+  onToggleShuffle,
+  onToggleChillMode,
   onSeek,
   onVolumeChange,
   onToggleMute,
@@ -67,12 +84,26 @@ export const TransportBar: React.FC<TransportBarProps> = ({
         </div>
 
         {/* Central Transport Controls */}
-        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2.5 flex-shrink-0">
+          {/* Shuffle Toggle */}
+          <button
+            type="button"
+            onClick={onToggleShuffle}
+            className={`p-1.5 sm:p-2 rounded-xl transition-all cursor-pointer ${
+              isShuffle
+                ? 'bg-white text-black font-bold shadow-md shadow-white/20'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+            title={isShuffle ? 'Shuffle is ON (randomized playback)' : 'Shuffle is OFF (sequential playback)'}
+          >
+            <Shuffle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+
           {/* Previous / Restart Track */}
           <button
             type="button"
             onClick={onPrevTrack}
-            className="p-1.5 sm:p-2 text-slate-300 hover:text-white transition-all cursor-pointer"
+            className="p-1.5 sm:p-2 text-slate-300 hover:text-white transition-all cursor-pointer hover:bg-white/5 rounded-xl"
             title="Restart / Previous Track"
           >
             <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -100,35 +131,86 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           <button
             type="button"
             onClick={onNextTrack}
-            className="p-1.5 sm:p-2 text-slate-300 hover:text-white transition-all cursor-pointer"
+            className="p-1.5 sm:p-2 text-slate-300 hover:text-white transition-all cursor-pointer hover:bg-white/5 rounded-xl"
             title="Next Track"
           >
             <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-        </div>
 
-        {/* Volume & Audio Output Control (Desktop only, mobile uses hardware buttons) */}
-        <div className="hidden md:flex items-center justify-end gap-2 w-1/3">
+          {/* Repeat Mode Toggle */}
           <button
             type="button"
-            onClick={onToggleMute}
-            className="p-1.5 text-slate-300 hover:text-white cursor-pointer"
+            onClick={onToggleRepeat}
+            className={`p-1.5 sm:p-2 rounded-xl transition-all cursor-pointer relative ${
+              repeatMode !== 'none'
+                ? 'bg-white text-black font-bold shadow-md shadow-white/20'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+            title={
+              repeatMode === 'all'
+                ? 'Repeat All (Full playlist loops by default)'
+                : repeatMode === 'one'
+                ? 'Repeat One (Current track loops)'
+                : 'Repeat Off (Stop at end)'
+            }
           >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4 text-rose-400" />
+            {repeatMode === 'one' ? (
+              <Repeat1 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             ) : (
-              <Volume2 className="w-4 h-4 text-white" />
+              <Repeat className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             )}
           </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={isMuted ? 0 : volume}
-            onChange={(e) => onVolumeChange(Number(e.target.value))}
-            className="w-20 h-1.5 bg-studio-900 rounded-lg appearance-none cursor-pointer accent-white"
-          />
+        </div>
+
+        {/* Right Side: Chill Mode + Volume Control */}
+        <div className="flex items-center justify-end gap-2 sm:gap-3 flex-shrink-0 sm:w-1/3">
+          {/* Chill Mode Trigger Button */}
+          <button
+            type="button"
+            onClick={onToggleChillMode}
+            className={`px-2 sm:px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold ${
+              isChillMode
+                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-400/40 shadow-sm'
+                : 'bg-studio-900/80 hover:bg-studio-800 text-slate-300 hover:text-white border-white/10'
+            }`}
+            title={isChillMode ? 'Exit Chill Mode' : 'Enter Chill Mode (minimal UI with full visualizer)'}
+          >
+            {isChillMode ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Exit Chill</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-indigo-300" />
+                <span className="hidden sm:inline">Chill</span>
+              </>
+            )}
+          </button>
+
+          {/* Volume & Audio Output Control (Desktop only) */}
+          <div className="hidden md:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleMute}
+              className="p-1.5 text-slate-300 hover:text-white cursor-pointer"
+            >
+              {isMuted || volume === 0 ? (
+                <VolumeX className="w-4 h-4 text-rose-400" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-white" />
+              )}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={isMuted ? 0 : volume}
+              onChange={(e) => onVolumeChange(Number(e.target.value))}
+              className="w-20 h-1.5 bg-studio-900 rounded-lg appearance-none cursor-pointer accent-white"
+            />
+          </div>
         </div>
       </div>
 

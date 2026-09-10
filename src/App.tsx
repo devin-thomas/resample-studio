@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Track, KnobSettings, PlaybackState } from './types/audio';
+import { Track, KnobSettings, PlaybackState, RepeatMode } from './types/audio';
 import { audioEngine } from './audio/engine';
 import { centsToSpeedPercent } from './audio/resampleMath';
 import { AudioVisualizer } from './components/AudioVisualizer';
@@ -14,6 +14,8 @@ import {
   Music,
   Sliders,
   UploadCloud,
+  Moon,
+  Minimize2,
 } from 'lucide-react';
 
 const DEFAULT_KNOB_SETTINGS: KnobSettings = {
@@ -33,6 +35,11 @@ export default function App() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [knobSettings, setKnobSettings] = useState<KnobSettings>(DEFAULT_KNOB_SETTINGS);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('all');
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [isChillMode, setIsChillMode] = useState(false);
+  const autoPlayNextRef = useRef(false);
+
   const [playback, setPlayback] = useState<PlaybackState>({
     isPlaying: false,
     currentTime: 0,
@@ -40,6 +47,9 @@ export default function App() {
     activeTrackId: null,
     volume: 1.0,
     isMuted: false,
+    repeatMode: 'all',
+    isShuffle: false,
+    isChillMode: false,
   });
   const [mobileTab, setMobileTab] = useState<'controls' | 'playlist'>('controls');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -52,7 +62,9 @@ export default function App() {
   // Active track change: sync audio engine & knobs
   useEffect(() => {
     if (activeTrack) {
-      audioEngine.loadTrack(activeTrack, playback.isPlaying);
+      const shouldPlay = autoPlayNextRef.current || playback.isPlaying;
+      autoPlayNextRef.current = false;
+      audioEngine.loadTrack(activeTrack, shouldPlay);
 
       // If track is locked, restore track's custom settings
       if (activeTrack.isLocked) {
@@ -73,27 +85,6 @@ export default function App() {
       }
     }
   }, [activeTrackId]);
-
-  // Handle Audio Engine Event subscriptions
-  useEffect(() => {
-    const unsubTime = audioEngine.onTimeUpdate((cur, dur) => {
-      setPlayback((prev) => ({ ...prev, currentTime: cur, duration: dur }));
-    });
-
-    const unsubPlayState = audioEngine.onPlayStateChange((playing) => {
-      setPlayback((prev) => ({ ...prev, isPlaying: playing }));
-    });
-
-    const unsubEnded = audioEngine.onTrackEnded(() => {
-      handleNextTrack();
-    });
-
-    return () => {
-      unsubTime();
-      unsubPlayState();
-      unsubEnded();
-    };
-  }, []);
 
   // Knob change handler
   const handleKnobChange = (updated: KnobSettings) => {
@@ -235,21 +226,156 @@ export default function App() {
     setTracks(newTracks);
   };
 
-  // Previous Track
-  const handlePrevTrack = () => {
-    if (tracks.length === 0) return;
-    const curIdx = tracks.findIndex((t) => t.id === activeTrackId);
-    const prevIdx = curIdx > 0 ? curIdx - 1 : tracks.length - 1;
-    setActiveTrackId(tracks[prevIdx].id);
+  // Toggle repeat mode: all -> one -> none -> all
+  const handleToggleRepeat = () => {
+    setRepeatMode((prev) => {
+      const next: RepeatMode = prev === 'all' ? 'one' : prev === 'one' ? 'none' : 'all';
+      return next;
+    });
   };
 
-  // Next Track
+  // Toggle shuffle mode
+  const handleToggleShuffle = () => {
+    setIsShuffle((prev) => !prev);
+  };
+
+  // Toggle chill mode
+  const handleToggleChillMode = () => {
+    setIsChillMode((prev) => !prev);
+  };
+
+  // Esc key listener to exit chill mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isChillMode) {
+        setIsChillMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isChillMode]);
+
+  // Previous Track
+  const handlePrevTrack = useCallback(() => {
+    if (tracks.length === 0) return;
+
+    // If played more than 3 seconds, restart current track
+    if (playback.currentTime > 3) {
+      audioEngine.seek(0);
+      return;
+    }
+
+    const curIdx = tracks.findIndex((t) => t.id === activeTrackId);
+    if (isShuffle && tracks.length > 1) {
+      let randomIdx = Math.floor(Math.random() * (tracks.length - 1));
+      if (randomIdx >= curIdx) randomIdx++;
+      setActiveTrackId(tracks[randomIdx].id);
+      return;
+    }
+
+    const prevIdx = curIdx > 0 ? curIdx - 1 : tracks.length - 1;
+    setActiveTrackId(tracks[prevIdx].id);
+  }, [tracks, activeTrackId, playback.currentTime, isShuffle]);
+
+  // Next Track (Manual)
   const handleNextTrack = useCallback(() => {
     if (tracks.length === 0) return;
     const curIdx = tracks.findIndex((t) => t.id === activeTrackId);
+
+    if (isShuffle && tracks.length > 1) {
+      let randomIdx = Math.floor(Math.random() * (tracks.length - 1));
+      if (randomIdx >= curIdx) randomIdx++;
+      setActiveTrackId(tracks[randomIdx].id);
+      return;
+    }
+
     const nextIdx = curIdx < tracks.length - 1 ? curIdx + 1 : 0;
     setActiveTrackId(tracks[nextIdx].id);
-  }, [tracks, activeTrackId]);
+  }, [tracks, activeTrackId, isShuffle]);
+
+  // Track Ended (Auto-advance based on repeatMode and isShuffle)
+  const handleTrackEnded = useCallback(() => {
+    if (tracks.length === 0) return;
+
+    if (repeatMode === 'one') {
+      // Repeat One: Loop the single track continuously
+      audioEngine.seek(0);
+      audioEngine.play();
+      return;
+    }
+
+    const curIdx = tracks.findIndex((t) => t.id === activeTrackId);
+
+    if (isShuffle) {
+      if (tracks.length === 1) {
+        if (repeatMode === 'all') {
+          audioEngine.seek(0);
+          audioEngine.play();
+        } else {
+          audioEngine.pause();
+          audioEngine.seek(0);
+        }
+        return;
+      }
+      autoPlayNextRef.current = true;
+      let randomIdx = Math.floor(Math.random() * (tracks.length - 1));
+      if (randomIdx >= curIdx) randomIdx++;
+      setActiveTrackId(tracks[randomIdx].id);
+      return;
+    }
+
+    // Sequential:
+    if (curIdx < tracks.length - 1) {
+      autoPlayNextRef.current = true;
+      setActiveTrackId(tracks[curIdx + 1].id);
+    } else {
+      // End of playlist reached
+      if (repeatMode === 'all') {
+        // Repeat All (Default): Loop back to track 0 and auto-play
+        autoPlayNextRef.current = true;
+        setActiveTrackId(tracks[0].id);
+      } else {
+        // Repeat None: Stop playback at end of playlist
+        audioEngine.pause();
+        audioEngine.seek(0);
+      }
+    }
+  }, [tracks, activeTrackId, repeatMode, isShuffle]);
+
+  // Ref to latest handleTrackEnded
+  const handleTrackEndedRef = useRef(handleTrackEnded);
+  useEffect(() => {
+    handleTrackEndedRef.current = handleTrackEnded;
+  }, [handleTrackEnded]);
+
+  // Audio Engine event subscriptions
+  useEffect(() => {
+    const unsubTime = audioEngine.onTimeUpdate((cur, dur) => {
+      setPlayback((prev) => ({ ...prev, currentTime: cur, duration: dur }));
+    });
+
+    const unsubPlayState = audioEngine.onPlayStateChange((playing) => {
+      setPlayback((prev) => ({ ...prev, isPlaying: playing }));
+    });
+
+    const unsubEnded = audioEngine.onTrackEnded(() => {
+      handleTrackEndedRef.current();
+    });
+
+    return () => {
+      unsubTime();
+      unsubPlayState();
+      unsubEnded();
+    };
+  }, []);
+
+  // Sync MediaSession next/prev action handlers
+  useEffect(() => {
+    audioEngine.setMediaSessionActionHandlers({
+      onNext: handleNextTrack,
+      onPrev: handlePrevTrack,
+    });
+  }, [handleNextTrack, handlePrevTrack]);
 
   // Toggle Play / Pause
   const handleTogglePlay = () => {
@@ -280,49 +406,83 @@ export default function App() {
   return (
     <div className="min-h-screen bg-studio-950 text-slate-100 flex flex-col selection:bg-white/20">
       {/* Full-Bleed Background Visualizer (ADR 6) */}
-      <AudioVisualizer hasFooter={tracks.length > 0} />
+      <AudioVisualizer hasFooter={tracks.length > 0 || isChillMode} />
 
-      {/* Hidden File Input for Empty State Dropzone */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept="audio/*,.mp3,.wav,.aac,.m4a"
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files && e.target.files.length > 0) {
-            handleAddFiles(e.target.files);
-            e.target.value = '';
-          }
-        }}
-      />
-
-      {/* Studio Header */}
-      <header className="border-b border-white/10 bg-studio-900/90 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Disc3
-              className={`w-5 h-5 text-black ${playback.isPlaying ? 'animate-spin' : ''}`}
-              style={{ animationDuration: '4s' }}
-            />
-          </div>
-          <div>
-            <h1 className="font-bold text-base sm:text-lg tracking-tight text-white">
-              RESAMPLE STUDIO
-            </h1>
-            <p className="text-[10px] text-slate-300 font-mono font-semibold tracking-wider">
-              PRO VARISPEED & MIX LAB
-            </p>
-          </div>
+      {/* Floating Exit Chill Mode Button (Visible only in Chill Mode) */}
+      {isChillMode && (
+        <div className="fixed top-5 right-5 z-50">
+          <button
+            type="button"
+            onClick={() => setIsChillMode(false)}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-studio-950/80 hover:bg-studio-900 border border-white/20 text-xs font-mono text-white font-bold backdrop-blur-md shadow-2xl transition-all cursor-pointer hover:scale-105"
+            title="Exit Chill Mode (or press Esc)"
+          >
+            <Minimize2 className="w-3.5 h-3.5 text-white" />
+            <span>Exit Chill Mode</span>
+            <kbd className="hidden sm:inline-block text-[10px] bg-white/15 px-1.5 py-0.5 rounded text-slate-200 font-mono font-normal ml-0.5">
+              ESC
+            </kbd>
+          </button>
         </div>
+      )}
 
-        {/* Action Pills */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* 120Hz Indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-studio-800/80 border border-white/10 text-xs text-white font-mono font-medium">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-            <span>120Hz ENGINE</span>
-          </div>
+      {/* When NOT in Chill Mode: Render Header, Tabs, and Main Studio Area */}
+      {!isChillMode && (
+        <>
+          {/* Hidden File Input for Empty State Dropzone */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="audio/*,.mp3,.wav,.aac,.m4a"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleAddFiles(e.target.files);
+                e.target.value = '';
+              }
+            }}
+          />
+
+          {/* Studio Header */}
+          <header className="border-b border-white/10 bg-studio-900/90 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <Disc3
+                  className={`w-5 h-5 text-black ${playback.isPlaying ? 'animate-spin' : ''}`}
+                  style={{ animationDuration: '4s' }}
+                />
+              </div>
+              <div>
+                <h1 className="font-bold text-base sm:text-lg tracking-tight text-white">
+                  RESAMPLE STUDIO
+                </h1>
+                <p className="text-[10px] text-slate-300 font-mono font-semibold tracking-wider">
+                  PRO VARISPEED & MIX LAB
+                </p>
+              </div>
+            </div>
+
+            {/* Action Pills */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Chill Mode Trigger in Header */}
+              {tracks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsChillMode(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-studio-800 hover:bg-studio-700 border border-white/10 text-xs text-white font-mono font-semibold transition-all cursor-pointer shadow-sm"
+                  title="Enter Chill Mode (full visualizer with music player)"
+                >
+                  <Moon className="w-3.5 h-3.5 text-indigo-300" />
+                  <span className="hidden sm:inline">Chill Mode</span>
+                </button>
+              )}
+
+              {/* 120Hz Indicator */}
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-studio-800/80 border border-white/10 text-xs text-white font-mono font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+                <span>120Hz ENGINE</span>
+              </div>
 
           {/* Export Mix Trigger (Green) */}
           {tracks.length > 0 && (
@@ -519,9 +679,11 @@ export default function App() {
           </div>
         )}
       </main>
+    </>
+  )}
 
       {/* Persistent Bottom Floating Transport Bar with iOS Safe Area */}
-      {tracks.length > 0 && (
+      {(tracks.length > 0 || isChillMode) && (
         <footer className="fixed bottom-0 inset-x-0 z-40 bg-studio-950/90 backdrop-blur-lg border-t border-white/10 px-4 py-3 pb-safe">
           <div className="max-w-7xl mx-auto">
             <TransportBar
@@ -531,9 +693,15 @@ export default function App() {
               duration={playback.duration}
               volume={playback.volume}
               isMuted={playback.isMuted}
+              repeatMode={repeatMode}
+              isShuffle={isShuffle}
+              isChillMode={isChillMode}
               onTogglePlay={handleTogglePlay}
               onPrevTrack={handlePrevTrack}
               onNextTrack={handleNextTrack}
+              onToggleRepeat={handleToggleRepeat}
+              onToggleShuffle={handleToggleShuffle}
+              onToggleChillMode={handleToggleChillMode}
               onSeek={handleSeek}
               onVolumeChange={handleVolumeChange}
               onToggleMute={handleToggleMute}
