@@ -1,14 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { audioEngine } from '../audio/engine';
-import { Maximize2, Minimize2 } from 'lucide-react';
 
 type VisualizerMode = 'vortex' | 'sphere' | 'grid';
 
 export const AudioVisualizer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<VisualizerMode>('vortex');
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [fps, setFps] = useState(120);
 
   useEffect(() => {
@@ -153,11 +151,18 @@ export const AudioVisualizer: React.FC = () => {
     pointLight2.position.set(-15, -10, 15);
     scene.add(pointLight2);
 
-    // 5. Interactive Tilt (Mouse & Touch)
+    // 5. Interactive Tilt with Momentum (ADR 7)
     let targetRotX = 0;
     let targetRotY = 0;
     let currentRotX = 0;
     let currentRotY = 0;
+    let velocityX = 0;
+    let velocityY = 0;
+    let prevNX = 0;
+    let prevNY = 0;
+    let isPointerOver = false;
+    const VELOCITY_DECAY = 0.96;
+    const MAX_VELOCITY = 0.08;
 
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -165,12 +170,25 @@ export const AudioVisualizer: React.FC = () => {
       const rect = container.getBoundingClientRect();
       const nx = ((clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -(((clientY - rect.top) / rect.height) * 2 - 1);
-      targetRotY = nx * 0.6;
-      targetRotX = ny * 0.4;
+
+      // Track velocity for momentum
+      velocityY = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, (nx - prevNX) * 0.5));
+      velocityX = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, (ny - prevNY) * 0.5));
+      prevNX = nx;
+      prevNY = ny;
+
+      targetRotY = nx * 1.2;
+      targetRotX = ny * 0.8;
+      isPointerOver = true;
+    };
+
+    const handlePointerLeave = () => {
+      isPointerOver = false;
     };
 
     container.addEventListener('mousemove', handlePointerMove);
     container.addEventListener('touchmove', handlePointerMove, { passive: true });
+    container.addEventListener('mouseleave', handlePointerLeave);
 
     // 6. Resize Observer
     const resizeObserver = new ResizeObserver((entries) => {
@@ -224,9 +242,24 @@ export const AudioVisualizer: React.FC = () => {
       for (let i = 60; i < 128; i++) trebleSum += freqData[i];
       const trebleAvg = trebleSum / 68 / 255;
 
-      // Smooth camera tilt
-      currentRotX += (targetRotX - currentRotX) * 0.05;
-      currentRotY += (targetRotY - currentRotY) * 0.05;
+      // Smooth camera tilt with momentum (ADR 7)
+      if (isPointerOver) {
+        // Snappy follow when pointer is active
+        currentRotX += (targetRotX - currentRotX) * 0.12;
+        currentRotY += (targetRotY - currentRotY) * 0.12;
+      } else {
+        // Apply momentum drift when pointer is gone
+        targetRotX += velocityX;
+        targetRotY += velocityY;
+        // Clamp target rotation
+        targetRotX = Math.max(-0.8, Math.min(0.8, targetRotX));
+        targetRotY = Math.max(-1.2, Math.min(1.2, targetRotY));
+        currentRotX += (targetRotX - currentRotX) * 0.06;
+        currentRotY += (targetRotY - currentRotY) * 0.06;
+        // Decay velocity
+        velocityX *= VELOCITY_DECAY;
+        velocityY *= VELOCITY_DECAY;
+      }
       scene.rotation.x = currentRotX;
       scene.rotation.y = currentRotY;
 
@@ -311,6 +344,7 @@ export const AudioVisualizer: React.FC = () => {
       resizeObserver.disconnect();
       container.removeEventListener('mousemove', handlePointerMove);
       container.removeEventListener('touchmove', handlePointerMove);
+      container.removeEventListener('mouseleave', handlePointerLeave);
 
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -325,59 +359,33 @@ export const AudioVisualizer: React.FC = () => {
   }, [mode]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`relative w-full rounded-2xl overflow-hidden border border-white/5 bg-studio-950 transition-all ${
-        isFullscreen
-          ? 'fixed inset-0 z-50 rounded-none h-screen'
-          : 'aspect-video md:aspect-[21/9] min-h-[260px]'
-      }`}
-    >
-      {/* Top HUD Overlay */}
-      <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
-        <div className="flex items-center gap-2 bg-studio-950/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 pointer-events-auto">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-xs font-mono font-semibold text-cyan-300">
-            THREE.JS AUDIO SURFACE
-          </span>
-          <span className="text-[11px] font-mono text-slate-400 border-l border-white/10 pl-2">
-            {fps} FPS
-          </span>
-        </div>
+    <>
+      {/* Full-Bleed Background Canvas (ADR 6) */}
+      <div
+        ref={containerRef}
+        className="fixed inset-0 z-0"
+      />
 
-        <div className="flex items-center gap-1.5 bg-studio-950/70 backdrop-blur-md p-1 rounded-xl border border-white/10 pointer-events-auto">
-          {(['vortex', 'sphere', 'grid'] as VisualizerMode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono uppercase transition-all cursor-pointer ${
-                mode === m
-                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-
+      {/* Floating Visualizer Controls Pill */}
+      <div className="fixed bottom-20 right-4 z-30 flex items-center gap-1.5 bg-studio-950/70 backdrop-blur-md p-1 rounded-xl border border-white/10">
+        {(['vortex', 'sphere', 'grid'] as VisualizerMode[]).map((m) => (
           <button
+            key={m}
             type="button"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 text-slate-400 hover:text-white transition-all cursor-pointer"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            onClick={() => setMode(m)}
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase transition-all cursor-pointer ${
+              mode === m
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                : 'text-slate-400 hover:text-white'
+            }`}
           >
-            {isFullscreen ? (
-              <Minimize2 className="w-3.5 h-3.5" />
-            ) : (
-              <Maximize2 className="w-3.5 h-3.5" />
-            )}
+            {m}
           </button>
-        </div>
+        ))}
+        <span className="text-[10px] font-mono text-slate-500 border-l border-white/10 pl-1.5 ml-0.5">
+          {fps}
+        </span>
       </div>
-
-      {/* Subtle Bottom Ambient Gradient */}
-      <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-studio-950 via-studio-950/40 to-transparent pointer-events-none" />
-    </div>
+    </>
   );
 };

@@ -6,14 +6,14 @@ Designed for beatmakers, producers, audio enthusiasts, and creators needing prec
 
 ## Primary flow
 
-1. **Input**: User drops or selects one or more audio files (`.mp3`, `.wav`, `.aac`, `.m4a`).
-2. **Playlist**: Files populate an interactive playlist. Track 1 begins playback or stands ready.
+1. **Landing**: User arrives at a clean, empty studio. A prominent upload dropzone occupies the primary visual position above the fold. The Three.js visualizer runs as a subtle ambient full-page background. No demo audio is pre-loaded.
+2. **Input**: User drops or selects one or more audio files (`.mp3`, `.wav`, `.aac`, `.m4a`). The dropzone collapses into a compact file card. Controls and knobs become active.
 3. **Manipulation**:
    - User adjusts the **Pitch Knob** (-1200 to +1200 cents). They adjust step size (1 to 100 cents), drag the knob with mouse/touch, scroll with the wheel, or type directly into the numerical badge.
    - User adjusts or observes the **Speed Knob** (25.0% to 400.0%, one decimal place).
    - In linked varispeed mode, moving pitch recalculates speed via $S = 2^{\text{cents}/1200}$ and vice versa.
    - User can lock a track's settings so switching tracks recalls individual pitch/speed profiles, or leave unlocked for global control.
-4. **Visual Experience**: While playing, an audio-reactive 3D surface (Three.js WebGL canvas) reacts dynamically to bass, mids, and treble at up to 120 FPS.
+4. **Visual Experience**: The full-bleed Three.js audio-reactive background transitions from ambient idle to dynamic audio-reactive mode during playback, responding to bass, mids, and treble at up to 120 FPS.
 5. **Output**: User selects specific playlist items (e.g. tracks 1 & 3, or all) and clicks "Export Mix". The client concatenates the rendered tracks into a clean <=320kbps MP3 download.
 
 ## Required behavior
@@ -25,14 +25,14 @@ Designed for beatmakers, producers, audio enthusiasts, and creators needing prec
 - **Track Setting Locks**: A toggle per track: "Lock Settings". When enabled, adjusting knobs stores values on that track. When switching tracks, the active knobs animate to that track's saved settings.
 - **Mix Export**: Checkboxes on playlist rows to include in export. Option to export under global knob values or per-track locked values. Client-side audio concatenation with progress indicator and MP3 download trigger.
 - **iOS Resilience**: Maintain playback routing through `HTMLAudioElement` / Web Audio node graph to prevent iOS background sleep and enable Dynamic Island / lockscreen controls.
-- **Empty States**: Friendly dropzone with demo audio option if user has no file immediately on hand.
+- **Empty States**: Clean, prominent upload dropzone with progressive disclosure. Controls and knobs are hidden until the user uploads their first track. A secondary "Load Demo" button in the header provides an exploration fallback.
 - **Error States**: Clear notification if an uploaded file is corrupted or unsupported, with graceful fallback.
 
 ## Content and presentation
 
 - **Visual Direction**: High-craft dark studio aesthetic inspired by `visual-ceiling.vercel.app` and `aicodingdictionary.com`. Tactile metallic / neon skeuomorphic digital knobs, glassmorphism panels, crisp typography (Geist / Inter / JetBrains Mono).
-- **Audio Visualizer**: Three.js particle mesh / wave ribbon with bloom effects that pulses with audio frequency bins.
-- **Responsive Parity**: Fluid touch-friendly layout on iOS/Android and full desktop precision.
+- **Audio Visualizer**: Full-viewport background layer (not contained in a bordered box). Three.js particle mesh / wave ribbon with bloom effects that runs as subtle ambient animation on idle and transitions to full audio-reactive mode during playback. Mouse/touch interaction features momentum-based inertia for a physical, satisfying feel.
+- **Responsive Parity**: Fluid touch-friendly layout on iOS/Android and full desktop precision. Upload dropzone and pitch/speed knobs must be fully visible above the fold on both desktop (1440px height) and mobile (iPhone SE through iPhone 16 Pro Max viewport) without scrolling.
 - **Smooth 120Hz**: Animation loops optimized via `requestAnimationFrame` and timestamp delta clamping.
 
 ## Boundaries

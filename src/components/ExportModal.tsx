@@ -141,7 +141,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 SELECTIVE MULTI-TRACK MIX EXPORT
               </h2>
               <p className="text-xs font-mono text-slate-400">
-                High-Fidelity $\le 320$kbps MP3 Concatenation
+                High-Fidelity ≤ 320kbps MP3 Concatenation
               </p>
             </div>
           </div>

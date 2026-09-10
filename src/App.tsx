@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Track, KnobSettings, PlaybackState } from './types/audio';
 import { audioEngine } from './audio/engine';
 import { centsToPlaybackRate, centsToSpeedPercent } from './audio/resampleMath';
@@ -15,6 +15,7 @@ import {
   Music,
   Sliders,
   PlaySquare,
+  UploadCloud,
 } from 'lucide-react';
 
 const DEFAULT_KNOB_SETTINGS: KnobSettings = {
@@ -44,13 +45,10 @@ export default function App() {
   });
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'controls' | 'playlist'>('controls');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load demo track initially so user can test right away
-  useEffect(() => {
-    const demo = createDemoTrack();
-    setTracks([demo]);
-    setActiveTrackId(demo.id);
-  }, []);
+  // No demo auto-load — musicians should personalize with their own audio (ADR 5)
 
   const activeTrack = tracks.find((t) => t.id === activeTrackId) || null;
 
@@ -282,8 +280,26 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-studio-950 text-slate-100 flex flex-col selection:bg-cyan-500/20">
+      {/* Full-Bleed Background Visualizer (ADR 6) */}
+      <AudioVisualizer />
+
+      {/* Hidden File Input for Empty State Dropzone */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="audio/*,.mp3,.wav,.aac,.m4a"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleAddFiles(e.target.files);
+            e.target.value = '';
+          }
+        }}
+      />
+
       {/* Studio Header */}
-      <header className="border-b border-white/10 bg-studio-900/80 backdrop-blur-md px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-40">
+      <header className="border-b border-white/10 bg-studio-900/80 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
             <Disc3
@@ -323,127 +339,220 @@ export default function App() {
           </div>
 
           {/* Export Mix Trigger */}
-          <button
-            type="button"
-            onClick={() => setIsExportModalOpen(true)}
-            className="py-1.5 px-3 sm:px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export Mix</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Tab Switcher (Visible on mobile only) */}
-      <div className="lg:hidden flex border-b border-white/10 bg-studio-900/60 px-4 py-2 gap-2">
-        <button
-          type="button"
-          onClick={() => setMobileTab('controls')}
-          className={`flex-1 py-2 rounded-xl text-xs font-mono flex items-center justify-center gap-2 transition-all ${
-            mobileTab === 'controls'
-              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-semibold'
-              : 'text-slate-400 bg-studio-900/40'
-          }`}
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          <span>Deck & Knobs</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setMobileTab('playlist')}
-          className={`flex-1 py-2 rounded-xl text-xs font-mono flex items-center justify-center gap-2 transition-all ${
-            mobileTab === 'playlist'
-              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-semibold'
-              : 'text-slate-400 bg-studio-900/40'
-          }`}
-        >
-          <Music className="w-3.5 h-3.5" />
-          <span>Playlist ({tracks.length})</span>
-        </button>
-      </div>
-
-      {/* Main Studio Work Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 mb-24">
-        {/* Left Column: 120Hz Visualizer & Tactile Knobs */}
-        <div
-          className={`lg:col-span-7 xl:col-span-8 flex flex-col gap-6 ${
-            mobileTab === 'playlist' ? 'hidden lg:flex' : 'flex'
-          }`}
-        >
-          {/* Three.js Audio-Reactive 3D Visual Surface */}
-          <AudioVisualizer />
-
-          {/* Master Tactile Dual Knobs Panel */}
-          <KnobControlPanel
-            settings={knobSettings}
-            onChange={handleKnobChange}
-            onReset={handleKnobReset}
-          />
-        </div>
-
-        {/* Right Column: Playlist Queue & Quick Concatenation Export */}
-        <div
-          className={`lg:col-span-5 xl:col-span-4 flex flex-col gap-6 ${
-            mobileTab === 'controls' ? 'hidden lg:flex' : 'flex'
-          }`}
-        >
-          {/* Multi-Track Playlist */}
-          <Playlist
-            tracks={tracks}
-            activeTrackId={activeTrackId}
-            isPlaying={playback.isPlaying}
-            onSelectTrack={(id) => setActiveTrackId(id)}
-            onTogglePlay={handleTogglePlay}
-            onAddFiles={handleAddFiles}
-            onRemoveTrack={handleRemoveTrack}
-            onToggleTrackLock={handleToggleTrackLock}
-            onToggleTrackExportSelection={handleToggleTrackExportSelection}
-            onToggleSelectAllExport={handleToggleSelectAllExport}
-            onMoveTrack={handleMoveTrack}
-          />
-
-          {/* Concatenation Mix Quick Launcher */}
-          <div className="studio-glass rounded-2xl p-5 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">
-                SELECTIVE MIX EXPORT
-              </span>
-              <span className="text-xs font-mono text-cyan-400">$\le 320$ KBPS MP3</span>
-            </div>
-            <p className="text-xs text-slate-400">
-              Combine any track subset into a seamless varispeed mix export with per-track or global pitch.
-            </p>
+          {tracks.length > 0 && (
             <button
               type="button"
               onClick={() => setIsExportModalOpen(true)}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs font-mono flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+              className="py-1.5 px-3 sm:px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
             >
-              <Download className="w-4 h-4" />
-              <span>Configure & Export Mix</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Mix</span>
             </button>
-          </div>
+          )}
         </div>
+      </header>
+
+      {/* Mobile Tab Switcher (Visible on mobile only, hidden when empty) */}
+      {tracks.length > 0 && (
+        <div className="lg:hidden flex border-b border-white/10 bg-studio-900/60 backdrop-blur-md px-4 py-2 gap-2 relative z-10">
+          <button
+            type="button"
+            onClick={() => setMobileTab('controls')}
+            className={`flex-1 py-2 rounded-xl text-xs font-mono flex items-center justify-center gap-2 transition-all ${
+              mobileTab === 'controls'
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-semibold'
+                : 'text-slate-400 bg-studio-900/40'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Deck & Knobs</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('playlist')}
+            className={`flex-1 py-2 rounded-xl text-xs font-mono flex items-center justify-center gap-2 transition-all ${
+              mobileTab === 'playlist'
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-semibold'
+                : 'text-slate-400 bg-studio-900/40'
+            }`}
+          >
+            <Music className="w-3.5 h-3.5" />
+            <span>Playlist ({tracks.length})</span>
+          </button>
+        </div>
+      )}
+
+      {/* Main Studio Work Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 relative z-10 mb-24">
+        {tracks.length === 0 ? (
+          /* ============================================ */
+          /* EMPTY STATE: Upload-First (ADR 5, T-09)     */
+          /* ============================================ */
+          <div className="flex flex-col items-center justify-center gap-6 py-8 sm:py-12">
+            {/* Primary Upload Dropzone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={(e) => { e.preventDefault(); setIsDragOver(false); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragOver(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleAddFiles(e.dataTransfer.files);
+                }
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`group cursor-pointer w-full max-w-lg rounded-2xl border-2 border-dashed p-10 sm:p-14 text-center transition-all duration-200 touch-manipulation backdrop-blur-xl ${
+                isDragOver
+                  ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01]'
+                  : 'border-white/15 bg-studio-900/60 hover:border-white/30 hover:bg-studio-900/80'
+              }`}
+            >
+              <div className="flex flex-col items-center justify-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:scale-110 transition-transform">
+                  <UploadCloud className="w-7 h-7" />
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-slate-200 group-hover:text-white">
+                    Choose your audio files
+                  </p>
+                  <p className="text-sm text-slate-400 mt-1.5">
+                    Tap to browse or drop{' '}
+                    <span className="text-slate-200 font-semibold">.mp3</span>,{' '}
+                    <span className="text-slate-200 font-semibold">.wav</span>,{' '}
+                    <span className="text-slate-200 font-semibold">.aac</span>, or{' '}
+                    <span className="text-slate-200 font-semibold">.m4a</span>
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-[11px] text-slate-400 font-mono">
+                  <span>Local-first • Processed in browser</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Idle Guidance Card */}
+            <div className="w-full max-w-lg rounded-2xl bg-studio-900/40 backdrop-blur-md border border-white/5 p-5 text-center">
+              <p className="text-xs font-medium text-slate-300">
+                Mathematical Varispeed Resampler
+              </p>
+              <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
+                Tape-style speed & pitch locking using{' '}
+                <code className="text-cyan-300 font-mono text-[10px]">
+                  ratio = 2 ** (cents / 1200)
+                </code>
+                . Audition, manipulate, and export high-bitrate MP3s directly on iPhone or desktop.
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* ============================================ */
+          /* ACTIVE STATE: Controls Above the Fold (T-10) */
+          /* ============================================ */
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            {/* Left Column: Upload Card + Knobs */}
+            <div
+              className={`lg:col-span-7 xl:col-span-8 flex flex-col gap-4 ${
+                mobileTab === 'playlist' ? 'hidden lg:flex' : 'flex'
+              }`}
+            >
+              {/* Compact Loaded File Card */}
+              <div className="studio-glass rounded-2xl p-4 backdrop-blur-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0">
+                    <Music className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-100 truncate">
+                      {activeTrack?.name || 'Select a track'}
+                    </p>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">
+                      {tracks.length} track{tracks.length !== 1 ? 's' : ''} loaded
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-xl bg-studio-800 hover:bg-studio-700 text-slate-300 hover:text-white border border-white/10 transition active:scale-95 touch-manipulation cursor-pointer"
+                >
+                  Add More
+                </button>
+              </div>
+
+              {/* Master Tactile Dual Knobs Panel — immediately visible */}
+              <KnobControlPanel
+                settings={knobSettings}
+                onChange={handleKnobChange}
+                onReset={handleKnobReset}
+              />
+            </div>
+
+            {/* Right Column: Playlist Queue & Quick Export */}
+            <div
+              className={`lg:col-span-5 xl:col-span-4 flex flex-col gap-4 ${
+                mobileTab === 'controls' ? 'hidden lg:flex' : 'flex'
+              }`}
+            >
+              {/* Multi-Track Playlist */}
+              <Playlist
+                tracks={tracks}
+                activeTrackId={activeTrackId}
+                isPlaying={playback.isPlaying}
+                onSelectTrack={(id) => setActiveTrackId(id)}
+                onTogglePlay={handleTogglePlay}
+                onAddFiles={handleAddFiles}
+                onRemoveTrack={handleRemoveTrack}
+                onToggleTrackLock={handleToggleTrackLock}
+                onToggleTrackExportSelection={handleToggleTrackExportSelection}
+                onToggleSelectAllExport={handleToggleSelectAllExport}
+                onMoveTrack={handleMoveTrack}
+              />
+
+              {/* Concatenation Mix Quick Launcher */}
+              <div className="studio-glass rounded-2xl p-5 backdrop-blur-xl flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+                    SELECTIVE MIX EXPORT
+                  </span>
+                  <span className="text-xs font-mono text-cyan-400">≤ 320 KBPS MP3</span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Combine any track subset into a seamless varispeed mix export with per-track or global pitch.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs font-mono flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Configure & Export Mix</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Persistent Bottom Floating Transport Bar with iOS Safe Area */}
-      <footer className="fixed bottom-0 inset-x-0 z-40 bg-studio-950/90 backdrop-blur-lg border-t border-white/10 px-4 py-3 pb-safe">
-        <div className="max-w-7xl mx-auto">
-          <TransportBar
-            currentTrack={activeTrack}
-            isPlaying={playback.isPlaying}
-            currentTime={playback.currentTime}
-            duration={playback.duration}
-            volume={playback.volume}
-            isMuted={playback.isMuted}
-            onTogglePlay={handleTogglePlay}
-            onPrevTrack={handlePrevTrack}
-            onNextTrack={handleNextTrack}
-            onSeek={handleSeek}
-            onVolumeChange={handleVolumeChange}
-            onToggleMute={handleToggleMute}
-          />
-        </div>
-      </footer>
+      {tracks.length > 0 && (
+        <footer className="fixed bottom-0 inset-x-0 z-40 bg-studio-950/90 backdrop-blur-lg border-t border-white/10 px-4 py-3 pb-safe">
+          <div className="max-w-7xl mx-auto">
+            <TransportBar
+              currentTrack={activeTrack}
+              isPlaying={playback.isPlaying}
+              currentTime={playback.currentTime}
+              duration={playback.duration}
+              volume={playback.volume}
+              isMuted={playback.isMuted}
+              onTogglePlay={handleTogglePlay}
+              onPrevTrack={handlePrevTrack}
+              onNextTrack={handleNextTrack}
+              onSeek={handleSeek}
+              onVolumeChange={handleVolumeChange}
+              onToggleMute={handleToggleMute}
+            />
+          </div>
+        </footer>
+      )}
 
       {/* Selective Mix Export Modal */}
       <ExportModal
