@@ -4,9 +4,9 @@ This document is the authoritative technical reference for the audio visualizati
 
 ---
 
-## 1. Architectural Overview
+### 1. Architectural Overview
 
-The visualizer in Resample Studio is **not** a constrained widget or video box. It is a **full-bleed, 120Hz audio-reactive 3D WebGL background layer** running directly behind the entire user interface ([ADR 6](file:///Users/neo/dev/resample-studio/DECISIONS.md#L60-L71)).
+The visualizer in Resample Studio is a **full-bleed, 3D WebGL background layer** running directly behind the entire user interface ([ADR 6](DECISIONS.md#6-full-bleed-visualization-background), [ADR 9](DECISIONS.md#9-visualizer-rebuild-tactile-worlds-tape-gravity-terrain--analysis-timeline-worker)).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -14,13 +14,13 @@ The visualizer in Resample Studio is **not** a constrained widget or video box. 
 ├────────────────────────────────────────────────────────────────────────┤
 │ Middle UI Layer (z-10): Glassmorphism Panels (Knobs, Playlist, Upload) │
 ├────────────────────────────────────────────────────────────────────────┤
-│ Control Overlay (z-30): Floating Mode Selector & FPS Counter Pill      │
+│ Control Overlay (z-30): Floating Mode Selector [Tape|Gravity|Terrain]  │
 ├────────────────────────────────────────────────────────────────────────┤
 │ Background Canvas (z-0): Three.js WebGL Scene (fixed inset-0)          │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-The UI cards sit on top using glassmorphism (`backdrop-blur-md`, `bg-studio-900/80`, `border-white/10`), letting the 3D particles and geometries glow through without sacrificing control contrast or text legibility.
+The UI cards sit on top using glassmorphism (`backdrop-blur-md`, `bg-studio-900/80`, `border-white/10`) tagged with `data-visualizer-ignore` so controls remain responsive without triggering background visualizer gestures.
 
 ---
 
@@ -36,30 +36,33 @@ The UI cards sit on top using glassmorphism (`backdrop-blur-md`, `bg-studio-900/
                      │    Decoded AudioBuffer    │
                      │ (ctx.decodeAudioData PCM) │
                      └─────────────┬─────────────┘
-                                   │
-              ┌────────────────────┴────────────────────┐
-              │                                         │
-              ▼                                         ▼
-   audioEngine.getFrequencyData()            audioEngine.getWaveformData()
-   • 128 FFT spectral bins (0..255)          • 128 PCM waveform samples (0..255)
-   • Bass, Mid, Treble averages              • Time-domain instantaneous amplitude
-              │                                         │
-              └────────────────────┬────────────────────┘
+                                   │ Asynchronous transfer
+                     ┌─────────────▼─────────────┐
+                     │   Audio Analysis Worker   │
+                     │ (2048 Radix-2 FFT + Hann) │
+                     │ (32 Log Bands + Flux)     │
+                     └─────────────┬─────────────┘
+                                   │ Progressive timeline stream
+                     ┌─────────────▼─────────────┐
+                     │   AudioFeatureTimeline    │
+                     │ (Interpolation + Envelopes│
+                     │  + Transient Events)      │
+                     └─────────────┬─────────────┘
                                    │
                                    ▼
-              ┌─────────────────────────────────────────┐
-              │       AudioVisualizer (Three.js)        │
-              │  • requestAnimationFrame (up to 120Hz)   │
-              │  • Pointer Parallax & Inertia Momentum  │
-              │  • Vertex & Attribute Array Mutation    │
-              │  • WebGLRenderer.render(scene, camera)  │
-              └─────────────────────────────────────────┘
+                     ┌───────────────────────────┐
+                     │     VisualizerRuntime     │
+                     │  (Single WebGLRenderer)   │
+                     │  • Tape (Flagship Ribbon) │
+                     │  • Gravity (Orbit Streams)│
+                     │  • Terrain (Scroll Grid)  │
+                     └───────────────────────────┘
 ```
 
-### Why Audio Routing is Decoupled ([ADR 8](file:///Users/neo/dev/resample-studio/DECISIONS.md#L84-L98))
+### Why Audio Routing is Decoupled ([ADR 8](DECISIONS.md#8-native-hardware-output-for-ios-background-audio--buffer-based-analysis))
 On iOS Safari, routing audio through `AudioContext.createMediaElementSource()` into `ctx.destination` causes the operating system to suspend audio playback the moment the user locks the screen or switches tabs.
 
-To ensure **unbroken background playback and Lock Screen / Dynamic Island integration**, the audio playback runs natively through an unrouted `<audio>` element. Spectral and waveform analysis is decoupled: when a track loads, its PCM data is decoded asynchronously into an in-memory `AudioBuffer`. The audio engine then calculates FFT frequency bins and waveform slices in real time based on `audioElement.currentTime`.
+To ensure **unbroken background playback and Lock Screen / Dynamic Island integration**, the audio playback runs natively through an unrouted `<audio>` element. Spectral and waveform analysis is decoupled: when a track loads, its PCM data is decoded asynchronously into an in-memory `AudioBuffer` and analyzed in a dedicated Web Worker (`src/workers/audioAnalysisWorker.ts`), with progressive timeline frames streamed to the main thread.
 
 ---
 
@@ -67,7 +70,7 @@ To ensure **unbroken background playback and Lock Screen / Dynamic Island integr
 
 ### 3.1 Audio Inputs (`audioEngine`)
 
-Audio metrics are polled on every animation tick from [`src/audio/engine.ts`](file:///Users/neo/dev/resample-studio/src/audio/engine.ts). Never instantiate new arrays inside the loop; reuse pre-allocated typed arrays:
+Audio metrics are polled on every animation tick from [`src/audio/engine.ts`](../src/audio/engine.ts). Never instantiate new arrays inside the loop; reuse pre-allocated typed arrays:
 
 ```ts
 const freqData = new Uint8Array(128);
@@ -110,7 +113,7 @@ audioEngine.getWaveformData(waveData);
 
 ---
 
-### 3.2 User Interaction & Physics Inputs ([ADR 7](file:///Users/neo/dev/resample-studio/DECISIONS.md#L72-L83))
+### 3.2 User Interaction & Physics Inputs ([ADR 7](../DECISIONS.md#7-improved-visualization-mousetouch-responsiveness))
 
 Visualizations must support interactive tilt and rotation with physical momentum:
 - **Normalized coordinates**:
@@ -146,56 +149,45 @@ For developers or agents unfamiliar with 3D/WebGL terminology:
 
 ---
 
-## 5. Current Visualizer Modes
+## 5. Visualizer Modes
 
-Located in [`src/components/AudioVisualizer.tsx`](file:///Users/neo/dev/resample-studio/src/components/AudioVisualizer.tsx):
+Implemented in `src/visualizer/modes/`:
 
-1. **`vortex`**:
-   - 1,800 particle points (`THREE.Points`) distributed in a spherical shell.
-   - Vertices pulse radially outward according to frequency bin energy and `bassAvg`.
-   - The entire swarm rotates on the Y/Z axes with speed boosted by `midAvg`.
-   - Encloses a pulsating central wireframe orb and 32 concentric tunnel rings.
-2. **`sphere`**:
-   - An icosahedron mesh (`detail: 3`).
-   - Vertices are displaced along their original coordinate vectors based on real-time `waveData` PCM samples.
-   - Mesh scale pulses with `bassAvg`.
-3. **`grid`**:
-   - Tunnel rings rotated 90° to form an infinite audio horizon grid.
-   - Grid depth reacts to bass hits.
+1. **`tape` (Flagship)**:
+   - 3 continuous 3D ribbons with Frenet/Bishop framing to eliminate orientation flips.
+   - Low-frequency bass bending, helical mid torsion, and high-frequency edge ripples.
+   - Transients inject localized traveling pulses that propagate along the ribbon length.
+   - Pointer interaction: grab and pull a ribbon section with physical spring inertia; releasing launches a damped traveling wave.
+2. **`gravity`**:
+   - 2,000 instanced particles traveling along 4 inclined orbital streams around a dark central void.
+   - Bass collective compression and outward rebound wave; mids integrated angular circulation.
+   - Transients emit expanding spherical shockwave shells disturbing particles as they travel outward.
+   - Pointer interaction: softened local attractor/repulsor with curved particle wake and residual circulation upon release.
+3. **`terrain`**:
+   - Continuous procedural height-field mesh extending across the horizon with atmospheric fog.
+   - Seamless forward scrolling coordinate system with zero recycling snaps.
+   - Bass creates broad transverse ridges; transients emit traveling wave pulses from the horizon.
+   - Pointer interaction: horizontal dragging steers lateral flow and leans camera gently with damped recovery.
 
 ---
 
 ## 6. How to Build a New Visualization (Modular Pattern)
 
-When adding or generating a new visualization mode, adhere to this modular interface:
+Visualizations implement the shared `StudioVisualization` interface defined in `src/visualizer/types.ts`:
 
 ```ts
 import * as THREE from 'three';
-
-export interface AudioFrameData {
-  freqData: Uint8Array;
-  waveData: Uint8Array;
-  bassAvg: number;
-  midAvg: number;
-  trebleAvg: number;
-  elapsedTime: number;
-}
+import { ModeContext, ModeId, QualityTier, Viewport, VisualizationFrame } from './types';
 
 export interface StudioVisualization {
-  readonly id: string;
-  readonly name: string;
-
-  /** Allocate geometries, materials, meshes, and add to scene */
-  init(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void;
-
-  /** Audio-reactive update executed every frame (up to 120Hz) */
-  update(frame: AudioFrameData): void;
-
-  /** Set visibility when switching modes */
+  readonly id: ModeId;
+  init(context: ModeContext): void;
+  update(frame: VisualizationFrame): void;
+  resize(viewport: Viewport): void;
+  setQuality(quality: QualityTier): void;
   setVisible(visible: boolean): void;
-
-  /** Free WebGL GPU resources when component unmounts */
-  dispose(scene: THREE.Scene): void;
+  reset(reason: string): void;
+  dispose(): void;
 }
 ```
 

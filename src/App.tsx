@@ -406,11 +406,14 @@ export default function App() {
   return (
     <div className="min-h-screen bg-studio-950 text-slate-100 flex flex-col selection:bg-white/20">
       {/* Full-Bleed Background Visualizer (ADR 6) */}
-      <AudioVisualizer hasFooter={tracks.length > 0 || isChillMode} />
+      <AudioVisualizer
+        hasFooter={tracks.length > 0 || isChillMode}
+        presentation={isChillMode ? 'chill' : 'studio'}
+      />
 
       {/* Floating Exit Chill Mode Button (Visible only in Chill Mode) */}
       {isChillMode && (
-        <div className="fixed top-5 right-5 z-50">
+        <div data-visualizer-ignore="true" className="fixed top-5 right-5 z-50">
           <button
             type="button"
             onClick={() => setIsChillMode(false)}
@@ -445,7 +448,7 @@ export default function App() {
           />
 
           {/* Studio Header */}
-          <header className="border-b border-white/10 bg-studio-900/90 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+          <header data-visualizer-ignore="true" className="border-b border-white/10 bg-studio-900/90 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
                 <Disc3
@@ -529,7 +532,7 @@ export default function App() {
       )}
 
       {/* Main Studio Work Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 relative z-10 mb-32 sm:mb-28">
+      <main data-visualizer-ignore="true" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 relative z-10 mb-32 sm:mb-28">
         {tracks.length === 0 ? (
           /* ============================================ */
           /* EMPTY STATE: Upload-First (ADR 5, T-09)     */
@@ -684,7 +687,7 @@ export default function App() {
 
       {/* Persistent Bottom Floating Transport Bar with iOS Safe Area */}
       {(tracks.length > 0 || isChillMode) && (
-        <footer className="fixed bottom-0 inset-x-0 z-40 bg-studio-950/90 backdrop-blur-lg border-t border-white/10 px-4 py-3 pb-safe">
+        <footer data-visualizer-ignore="true" className="fixed bottom-0 inset-x-0 z-40 bg-studio-950/90 backdrop-blur-lg border-t border-white/10 px-4 py-3 pb-safe">
           <div className="max-w-7xl mx-auto">
             <TransportBar
               currentTrack={activeTrack}

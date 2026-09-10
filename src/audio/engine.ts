@@ -1,4 +1,5 @@
 import { Track } from '../types/audio';
+import { audioFeatureTimeline } from '../visualizer/audioFeatures';
 
 export type AudioEventCallback = () => void;
 
@@ -73,6 +74,7 @@ class AudioEngine {
   private currentTrack: Track | null = null;
   private currentCents = 0;
   private lastPositionSync = 0;
+  private decodeGeneration = 0;
 
   private onTimeUpdateCbs: Set<(currentTime: number, duration: number) => void> = new Set();
   private onTrackEndedCbs: Set<() => void> = new Set();
@@ -160,6 +162,8 @@ class AudioEngine {
     this.currentCents = track.pitchCents;
     this.disablePitchPreservation();
 
+    audioFeatureTimeline.resetTrack();
+
     if (this.audioElement.src !== track.objectUrl) {
       this.audioElement.src = track.objectUrl;
       this.audioElement.currentTime = 0;
@@ -177,6 +181,7 @@ class AudioEngine {
   }
 
   private async decodeTrackBuffer(track: Track) {
+    const decodeGen = ++this.decodeGeneration;
     try {
       let arrayBuf: ArrayBuffer;
       if (track.file) {
@@ -187,8 +192,13 @@ class AudioEngine {
       }
 
       const ctx = this.getAudioContext();
-      this.currentBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
+      const decoded = await ctx.decodeAudioData(arrayBuf.slice(0));
+      if (decodeGen !== this.decodeGeneration) return;
+
+      this.currentBuffer = decoded;
+      audioFeatureTimeline.analyzeBuffer(track.id, decoded);
     } catch (e) {
+      if (decodeGen !== this.decodeGeneration) return;
       console.warn('AudioBuffer decoding for visualizer failed (playback unaffected):', e);
       this.currentBuffer = null;
     }
@@ -209,6 +219,7 @@ class AudioEngine {
 
   public restart() {
     this.audioElement.currentTime = 0;
+    audioFeatureTimeline.notifySeek(0);
     if (this.audioElement.paused) {
       this.play();
     }
@@ -219,6 +230,7 @@ class AudioEngine {
     if (!isNaN(timeSeconds) && isFinite(timeSeconds)) {
       const dur = this.audioElement.duration || 0;
       this.audioElement.currentTime = Math.max(0, Math.min(timeSeconds, dur));
+      audioFeatureTimeline.notifySeek(this.audioElement.currentTime);
       this.syncPositionState(true);
     }
   }
@@ -238,6 +250,10 @@ class AudioEngine {
     const rate = Math.pow(2, cents / 1200);
     this.setPlaybackRate(rate);
     this.updateMediaSessionMetadata();
+  }
+
+  public getPlaybackRate(): number {
+    return this.audioElement.playbackRate || 1.0;
   }
 
   /**

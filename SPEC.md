@@ -13,7 +13,7 @@ Designed for beatmakers, producers, audio enthusiasts, and creators needing prec
    - User adjusts or observes the **Speed Knob** (25.0% to 400.0%, one decimal place).
    - In linked varispeed mode, moving pitch recalculates speed via $S = 2^{\text{cents}/1200}$ and vice versa.
    - User can lock a track's settings so switching tracks recalls individual pitch/speed profiles, or leave unlocked for global control.
-4. **Visual Experience**: The full-bleed Three.js audio-reactive background transitions from ambient idle to dynamic audio-reactive mode during playback, responding to bass, mids, and treble at up to 120 FPS.
+4. **Visual Experience**: The full-bleed Three.js background features three distinct tactile worlds: **Tape** (flagship ribbon with traveling waves and grab physics), **Gravity** (orbital force field with localized attractor/repulsor dynamics and shockwaves), and **Terrain** (continuous procedural scrolling height-field with lateral steering). Spectral and transient analysis is decoupled into a background Web Worker, ensuring zero audio jitter and physical momentum across both 60Hz and 120Hz displays.
 5. **Output**: User selects specific playlist items (e.g. tracks 1 & 3, or all) and clicks "Export Mix". The client concatenates the rendered tracks into a clean <=320kbps MP3 download.
 
 ## Required behavior

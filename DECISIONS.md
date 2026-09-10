@@ -96,3 +96,20 @@ Reason: Guarantees 100% reliable background playback on iOS when leaving Safari 
 
 Consequences: Background playback is rock solid. Real-time visualizer data is decoupled from audio output hardware routing.
 
+## 9. Visualizer Rebuild: Tactile Worlds (Tape, Gravity, Terrain) & Analysis Timeline Worker
+
+Status: accepted
+
+Context: The initial Vortex, Sphere, and Grid visualizers computed raw per-frame DFT calculations on the render thread and mapped instantaneous audio samples directly to absolute angles and vertex displacements, causing visual jitter and lack of physical momentum. Furthermore, mouse tilt was restricted to whole-scene tilting.
+
+Decision:
+1. Replace Vortex, Sphere, and Grid with **Tape** (flagship continuous ribbons with wave propagation), **Gravity** (orbital streams with localized attractor/repulsor dynamics and shockwaves), and **Terrain** (continuous procedural scrolling height-field with lateral steering).
+2. Move audio spectral and transient analysis off the main render thread into a dedicated Web Worker (`src/workers/audioAnalysisWorker.ts`), utilizing a 2048-point Radix-2 FFT with Hann windowing, 32 logarithmic bands, and adaptive spectral flux transient detection.
+3. Decouple media time from simulation time: animate via bounded wall-clock delta times with analytical damped harmonic springs, ensuring identical physical motion across 60Hz and 120Hz display refresh rates.
+4. Establish clear UI interaction boundaries via `data-visualizer-ignore` and Pointer Events with capture and clean cancellation, ensuring studio knobs, sliders, playlist controls, and vertical scrolling are never intercepted.
+
+Reason: Creates rich, musical environments with genuine physical momentum and localized tactile response to touch, completely eliminating render-thread DFT overhead and audio jitter.
+
+Consequences: Audio analysis is asynchronously streamed to the timeline; fallback to ambient movement is seamless if analysis is pending or unavailable. See [docs/VISUALIZATIONS.md](docs/VISUALIZATIONS.md) and [docs/visualizer-rebuild/](docs/visualizer-rebuild/) for full architectural specifications.
+
+
