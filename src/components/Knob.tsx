@@ -10,6 +10,8 @@ interface KnobProps {
   defaultValue?: number;
   decimals?: number;
   accentColor?: 'cyan' | 'amber' | 'purple';
+  disabled?: boolean;
+  disabledReason?: string;
   onChange: (val: number) => void;
   formatDisplay?: (val: number) => string;
 }
@@ -24,6 +26,8 @@ export const Knob: React.FC<KnobProps> = ({
   defaultValue = 0,
   decimals = 0,
   accentColor = 'cyan',
+  disabled = false,
+  disabledReason,
   onChange,
   formatDisplay,
 }) => {
@@ -78,7 +82,7 @@ export const Knob: React.FC<KnobProps> = ({
 
   // Mouse / Touch Drag handling (Vertical sensitivity)
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (isEditing) return;
+    if (disabled || isEditing) return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setIsDragging(true);
     dragStartY.current = e.clientY;
@@ -103,6 +107,7 @@ export const Knob: React.FC<KnobProps> = ({
 
   // Scroll wheel handling
   const handleWheel = (e: React.WheelEvent) => {
+    if (disabled) return;
     e.preventDefault();
     const direction = e.deltaY < 0 ? 1 : -1;
     const delta = direction * step;
@@ -111,6 +116,7 @@ export const Knob: React.FC<KnobProps> = ({
 
   // Double click reset
   const handleDoubleClick = () => {
+    if (disabled) return;
     updateClampedValue(defaultValue);
   };
 
@@ -151,22 +157,37 @@ export const Knob: React.FC<KnobProps> = ({
 
   return (
     <div className="flex flex-col items-center select-none group w-full">
-      <span className="text-[10px] sm:text-[11px] font-mono tracking-wider text-slate-200 uppercase mb-1.5 font-semibold">
-        {label}
-      </span>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-[10px] sm:text-[11px] font-mono tracking-wider text-slate-200 uppercase font-bold">
+          {label}
+        </span>
+        {disabled && (
+          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/10 text-slate-300 border border-white/10 tracking-tight">
+            AUTO
+          </span>
+        )}
+      </div>
 
       {/* Rotary Knob Body with Responsive Sizing */}
       <div
         ref={knobRef}
-        className={`relative w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center cursor-ns-resize touch-none select-none transition-shadow duration-300 ${
-          isDragging ? colorStyles.glow : 'hover:shadow-lg hover:shadow-black/60'
+        className={`relative w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center touch-none select-none transition-shadow duration-300 ${
+          disabled
+            ? 'cursor-default'
+            : isDragging
+            ? colorStyles.glow
+            : 'cursor-ns-resize hover:shadow-lg hover:shadow-black/60'
         }`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onWheel={handleWheel}
-        onDoubleClick={handleDoubleClick}
-        title="Drag up/down to adjust, scroll wheel, or double-click to reset"
+        onPointerDown={disabled ? undefined : handlePointerDown}
+        onPointerMove={disabled ? undefined : handlePointerMove}
+        onPointerUp={disabled ? undefined : handlePointerUp}
+        onWheel={disabled ? undefined : handleWheel}
+        onDoubleClick={disabled ? undefined : handleDoubleClick}
+        title={
+          disabled
+            ? (disabledReason || 'Controlled automatically')
+            : 'Drag up/down to adjust, scroll wheel, or double-click to reset'
+        }
       >
         {/* SVG Progress Arc */}
         <svg className="w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
@@ -219,7 +240,7 @@ export const Knob: React.FC<KnobProps> = ({
 
       {/* Interactive Value Badge / Direct Input - White Font */}
       <div className="mt-2 flex items-center justify-center">
-        {isEditing ? (
+        {!disabled && isEditing ? (
           <input
             type="number"
             value={editValue}
@@ -230,14 +251,19 @@ export const Knob: React.FC<KnobProps> = ({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleCommitEdit}
             onKeyDown={handleKeyDown}
-            className="w-24 px-2 py-1 text-center font-mono text-xs sm:text-sm bg-studio-900 border border-white/40 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-white"
+            className="w-24 px-2 py-1 text-center font-mono text-xs sm:text-sm bg-studio-900 border border-white/40 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-white font-bold"
           />
         ) : (
           <button
             type="button"
-            onClick={() => setIsEditing(true)}
-            className="px-2.5 py-1 rounded-lg bg-studio-900/90 hover:bg-studio-800 border border-white/15 hover:border-white/30 transition-all font-mono text-xs sm:text-sm font-bold text-white shadow-sm cursor-text tracking-tight"
-            title="Click to type exact number"
+            disabled={disabled}
+            onClick={() => !disabled && setIsEditing(true)}
+            className={`px-2.5 py-1 rounded-lg bg-studio-900/90 border border-white/15 transition-all font-mono text-xs sm:text-sm font-bold text-white shadow-sm tracking-tight ${
+              disabled
+                ? 'cursor-default opacity-100'
+                : 'hover:bg-studio-800 hover:border-white/30 cursor-text'
+            }`}
+            title={disabled ? (disabledReason || 'Controlled automatically') : 'Click to type exact number'}
           >
             {displayString}
           </button>

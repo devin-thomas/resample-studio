@@ -181,7 +181,7 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
       <div className="grid grid-cols-2 gap-3 sm:gap-6 py-1">
         {/* Pitch Knob */}
         <div className={`flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl bg-studio-900/50 border transition-all relative ${
-          settings.linkMode === 'pitch' ? 'border-white/30 ring-1 ring-white/10' : 'border-white/10'
+          settings.linkMode === 'pitch' ? 'border-white/30 ring-1 ring-white/10 shadow-md shadow-black/40' : 'border-white/10'
         }`}>
           <Knob
             label="PITCH"
@@ -193,17 +193,27 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
             defaultValue={0}
             decimals={0}
             accentColor="cyan"
+            disabled={settings.linkMode === 'speed'}
+            disabledReason="Pitch is locked to speed in Speed mode"
             onChange={handlePitchChange}
             formatDisplay={(val) => `${val > 0 ? '+' : ''}${val}¢ (${(val / 100).toFixed(1)}st)`}
           />
-          <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-slate-200 text-center font-medium">
-            Step: <span className="text-white font-bold">{settings.centsStep}¢</span>
+          <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-center font-medium">
+            {settings.linkMode === 'speed' ? (
+              <span className="text-slate-300 bg-studio-950 px-2 py-0.5 rounded-full border border-white/10 font-bold text-[10px]">
+                DRIVEN BY SPEED
+              </span>
+            ) : (
+              <span className="text-slate-200">
+                Step: <span className="text-white font-bold">{settings.centsStep}¢</span>
+              </span>
+            )}
           </div>
         </div>
 
         {/* Speed Knob */}
         <div className={`flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl bg-studio-900/50 border transition-all relative ${
-          settings.linkMode === 'speed' ? 'border-white/30 ring-1 ring-white/10' : 'border-white/10'
+          settings.linkMode === 'speed' ? 'border-white/30 ring-1 ring-white/10 shadow-md shadow-black/40' : 'border-white/10'
         }`}>
           <Knob
             label="SPEED"
@@ -215,11 +225,21 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
             defaultValue={100.0}
             decimals={1}
             accentColor="amber"
+            disabled={settings.linkMode === 'pitch'}
+            disabledReason="Speed is locked to pitch in Pitch mode"
             onChange={handleSpeedChange}
             formatDisplay={(val) => `${val.toFixed(1)}% (${(val / 100).toFixed(2)}x)`}
           />
-          <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-slate-200 text-center font-medium">
-            Res: <span className="text-white font-bold">0.1%</span>
+          <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-center font-medium">
+            {settings.linkMode === 'pitch' ? (
+              <span className="text-slate-300 bg-studio-950 px-2 py-0.5 rounded-full border border-white/10 font-bold text-[10px]">
+                DRIVEN BY PITCH
+              </span>
+            ) : (
+              <span className="text-slate-200">
+                Res: <span className="text-white font-bold">0.1%</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
