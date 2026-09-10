@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Track, KnobSettings, PlaybackState } from './types/audio';
 import { audioEngine } from './audio/engine';
-import { centsToPlaybackRate, centsToSpeedPercent } from './audio/resampleMath';
-import { createDemoTrack } from './audio/demoAudio';
+import { centsToSpeedPercent } from './audio/resampleMath';
 import { AudioVisualizer } from './components/AudioVisualizer';
 import { KnobControlPanel } from './components/KnobControlPanel';
 import { Playlist } from './components/Playlist';
@@ -14,15 +13,14 @@ import {
   Download,
   Music,
   Sliders,
-  PlaySquare,
   UploadCloud,
 } from 'lucide-react';
 
 const DEFAULT_KNOB_SETTINGS: KnobSettings = {
   pitchCents: 0,
   speedPercent: 100.0,
-  centsStep: 10,
-  linkMode: 'linked',
+  centsStep: 3,
+  linkMode: 'pitch',
   capMode: 'basic',
   basicCap: 1200,
   advancedMinCents: -1200,
@@ -43,13 +41,12 @@ export default function App() {
     volume: 1.0,
     isMuted: false,
   });
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'controls' | 'playlist'>('controls');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // No demo auto-load — musicians should personalize with their own audio (ADR 5)
-
+  // Derive active track object
   const activeTrack = tracks.find((t) => t.id === activeTrackId) || null;
 
   // Active track change: sync audio engine & knobs
@@ -68,7 +65,11 @@ export default function App() {
         audioEngine.setPlaybackRateFromCents(activeTrack.pitchCents);
       } else {
         // Apply current knobs to this unlocked track
-        audioEngine.setPlaybackRateFromCents(knobSettings.pitchCents);
+        if (knobSettings.linkMode === 'pitch') {
+          audioEngine.setPlaybackRateFromCents(knobSettings.pitchCents);
+        } else {
+          audioEngine.setPlaybackRate(knobSettings.speedPercent / 100);
+        }
       }
     }
   }, [activeTrackId]);
@@ -92,20 +93,17 @@ export default function App() {
       unsubPlayState();
       unsubEnded();
     };
-  }, [tracks, activeTrackId]);
+  }, []);
 
   // Knob change handler
   const handleKnobChange = (updated: KnobSettings) => {
     setKnobSettings(updated);
 
     // Update real-time audio playback rate
-    if (updated.linkMode === 'linked') {
+    if (updated.linkMode === 'pitch') {
       audioEngine.setPlaybackRateFromCents(updated.pitchCents);
-    } else if (updated.linkMode === 'opposite') {
-      const rate = centsToPlaybackRate(-updated.pitchCents);
-      audioEngine.setPlaybackRate(rate);
     } else {
-      // Independent
+      // 'speed' or 'unlinked'
       audioEngine.setPlaybackRate(updated.speedPercent / 100);
     }
 
@@ -132,6 +130,7 @@ export default function App() {
       ...knobSettings,
       pitchCents: 0,
       speedPercent: 100.0,
+      centsStep: 3,
     };
     handleKnobChange(resetSettings);
   };
@@ -279,9 +278,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-studio-950 text-slate-100 flex flex-col selection:bg-cyan-500/20">
+    <div className="min-h-screen bg-studio-950 text-slate-100 flex flex-col selection:bg-white/20">
       {/* Full-Bleed Background Visualizer (ADR 6) */}
-      <AudioVisualizer />
+      <AudioVisualizer hasFooter={tracks.length > 0} />
 
       {/* Hidden File Input for Empty State Dropzone */}
       <input
@@ -319,33 +318,18 @@ export default function App() {
 
         {/* Action Pills */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quick Demo button */}
-          <button
-            type="button"
-            onClick={() => {
-              const demo = createDemoTrack();
-              setTracks((prev) => [...prev, demo]);
-              setActiveTrackId(demo.id);
-            }}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-studio-800 hover:bg-studio-700 border border-white/10 text-xs text-white font-mono font-semibold transition-all cursor-pointer shadow-sm"
-            title="Load demo electronic groove"
-          >
-            <PlaySquare className="w-3.5 h-3.5 text-white" />
-            <span>Load Demo</span>
-          </button>
-
           {/* 120Hz Indicator */}
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-studio-800/80 border border-white/10 text-xs text-white font-mono font-medium">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-studio-800/80 border border-white/10 text-xs text-white font-mono font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-white" />
             <span>120Hz ENGINE</span>
           </div>
 
-          {/* Export Mix Trigger */}
+          {/* Export Mix Trigger (Green) */}
           {tracks.length > 0 && (
             <button
               type="button"
               onClick={() => setIsExportModalOpen(true)}
-              className="py-1.5 px-3 sm:px-4 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-white/10 transition-all cursor-pointer"
+              className="py-1.5 px-3 sm:px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export Mix</span>
@@ -525,7 +509,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsExportModalOpen(true)}
-                  className="w-full py-3 px-4 rounded-xl bg-white text-black hover:bg-slate-200 font-bold text-xs font-mono flex items-center justify-center gap-2 shadow-lg shadow-white/10 transition-all cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 font-bold text-xs font-mono flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   <span>Configure & Export Mix</span>

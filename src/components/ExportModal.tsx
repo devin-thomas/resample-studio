@@ -350,7 +350,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <div className="w-full h-2 bg-studio-950 rounded-full overflow-hidden">
               <div
-                className="h-full bg-white transition-all duration-150"
+                className="h-full bg-emerald-500 transition-all duration-150"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -394,7 +394,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             type="button"
             onClick={handleStartExport}
             disabled={isExporting || selectedTracks.length === 0}
-            className="px-6 py-2.5 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs font-mono flex items-center gap-2 shadow-lg shadow-white/10 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs font-mono flex items-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
             <span>{isExporting ? 'Rendering Mix...' : 'Export Concatenated Mix'}</span>

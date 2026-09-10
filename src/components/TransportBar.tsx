@@ -42,7 +42,7 @@ export const TransportBar: React.FC<TransportBarProps> = ({
   const effectiveDuration = duration || currentTrack?.duration || 0;
 
   return (
-    <div className="studio-glass rounded-2xl p-3 sm:p-4 flex flex-col gap-2 sm:gap-3 border border-white/10 shadow-2xl">
+    <div className="studio-glass rounded-2xl p-3 sm:p-4 flex flex-col gap-2 sm:gap-3 border-2 border-zinc-500/70 shadow-2xl ring-1 ring-zinc-400/20">
       {/* Top Row: Track Metadata + Main Controls + Volume (on desktop) */}
       <div className="flex items-center justify-between gap-3 w-full">
         {/* Track Label */}

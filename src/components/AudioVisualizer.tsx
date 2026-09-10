@@ -4,7 +4,11 @@ import { audioEngine } from '../audio/engine';
 
 type VisualizerMode = 'vortex' | 'sphere' | 'grid';
 
-export const AudioVisualizer: React.FC = () => {
+interface AudioVisualizerProps {
+  hasFooter?: boolean;
+}
+
+export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ hasFooter = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<VisualizerMode>('vortex');
   const [fps, setFps] = useState(120);
@@ -367,22 +371,26 @@ export const AudioVisualizer: React.FC = () => {
       />
 
       {/* Floating Visualizer Controls Pill */}
-      <div className="fixed bottom-24 sm:bottom-22 right-3 sm:right-4 z-30 flex items-center gap-1.5 bg-studio-950/80 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-lg">
+      <div
+        className={`fixed right-3 sm:right-4 z-30 flex items-center gap-1.5 bg-studio-950/80 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-lg transition-all duration-200 ${
+          hasFooter ? 'bottom-28 sm:bottom-28' : 'bottom-6 sm:bottom-6'
+        }`}
+      >
         {(['vortex', 'sphere', 'grid'] as VisualizerMode[]).map((m) => (
           <button
             key={m}
             type="button"
             onClick={() => setMode(m)}
-            className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase transition-all cursor-pointer font-bold ${
               mode === m
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white text-black shadow-sm'
+                : 'text-slate-300 hover:text-white'
             }`}
           >
             {m}
           </button>
         ))}
-        <span className="text-[10px] font-mono text-slate-500 border-l border-white/10 pl-1.5 ml-0.5">
+        <span className="text-[10px] font-mono text-slate-300 font-bold border-l border-white/10 pl-1.5 ml-0.5">
           {fps}
         </span>
       </div>
