@@ -1,6 +1,6 @@
 # Resample Studio Plan
 
-Status: awaiting approval
+Status: completed
 
 ## Intended result
 
