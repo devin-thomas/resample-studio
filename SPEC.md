@@ -31,7 +31,7 @@ Designed for beatmakers, producers, audio enthusiasts, and creators needing prec
 ## Content and presentation
 
 - **Visual Direction**: High-craft dark studio aesthetic inspired by `visual-ceiling.vercel.app` and `aicodingdictionary.com`. Tactile metallic / neon skeuomorphic digital knobs, glassmorphism panels, crisp typography (Geist / Inter / JetBrains Mono).
-- **Audio Visualizer**: Full-viewport background layer (not contained in a bordered box). Three.js particle mesh / wave ribbon with bloom effects that runs as subtle ambient animation on idle and transitions to full audio-reactive mode during playback. Mouse/touch interaction features momentum-based inertia for a physical, satisfying feel.
+- **Audio Visualizer**: Full-viewport background layer (not contained in a bordered box). Three.js particle mesh / wave ribbon with bloom effects that runs as subtle ambient animation on idle and transitions to full audio-reactive mode during playback. Mouse/touch interaction features momentum-based inertia for a physical, satisfying feel. See [Visualization Technical Guide](docs/VISUALIZATIONS.md) for architecture, inputs/outputs, and module interfaces.
 - **Responsive Parity**: Fluid touch-friendly layout on iOS/Android and full desktop precision. Upload dropzone and pitch/speed knobs must be fully visible above the fold on both desktop (1440px height) and mobile (iPhone SE through iPhone 16 Pro Max viewport) without scrolling.
 - **Smooth 120Hz**: Animation loops optimized via `requestAnimationFrame` and timestamp delta clamping.
 

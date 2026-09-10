@@ -67,7 +67,7 @@ Decision: Render the Three.js canvas as a fixed, full-viewport background layer 
 
 Reason: Eliminates the largest above-the-fold space consumer, allowing upload and knobs to be immediately visible. Creates an immersive, borderless visual experience that doesn't compete with controls for screen real estate.
 
-Consequences: All UI panels need sufficient contrast/blur against the dynamic background. The visualizer mode selector moves to a small floating pill overlay. Performance profile unchanged.
+Consequences: All UI panels need sufficient contrast/blur against the dynamic background. The visualizer mode selector moves to a small floating pill overlay. Performance profile unchanged. See [docs/VISUALIZATIONS.md](docs/VISUALIZATIONS.md) for full architecture and development specs.
 
 ## 7. Improved Visualization Mouse/Touch Responsiveness
 
