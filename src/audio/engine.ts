@@ -76,6 +76,7 @@ class AudioEngine {
   private lastPositionSync = 0;
   private decodeGeneration = 0;
 
+  private hasEndedFired = false;
   private onTimeUpdateCbs: Set<(currentTime: number, duration: number) => void> = new Set();
   private onTrackEndedCbs: Set<() => void> = new Set();
   private onPlayStateChangeCbs: Set<(isPlaying: boolean) => void> = new Set();
@@ -86,6 +87,7 @@ class AudioEngine {
     this.audioElement = document.createElement('audio');
     this.audioElement.id = 'resample-media-player';
     this.audioElement.preload = 'auto';
+    this.audioElement.loop = false;
     this.audioElement.style.display = 'none';
 
     // Critical iOS Safari attributes for persistent background playback
@@ -101,13 +103,22 @@ class AudioEngine {
       const dur = this.audioElement.duration || 0;
       this.onTimeUpdateCbs.forEach((cb) => cb(cur, dur));
       this.syncPositionState();
+
+      // Guard fallback: if playback reached the end and ended hasn't fired yet
+      if (dur > 0 && cur >= dur && !this.audioElement.paused && !this.hasEndedFired) {
+        this.hasEndedFired = true;
+        this.onTrackEndedCbs.forEach((cb) => cb());
+      }
     });
 
     this.audioElement.addEventListener('ended', () => {
+      if (this.hasEndedFired) return;
+      this.hasEndedFired = true;
       this.onTrackEndedCbs.forEach((cb) => cb());
     });
 
     this.audioElement.addEventListener('play', () => {
+      this.hasEndedFired = false;
       this.onPlayStateChangeCbs.forEach((cb) => cb(true));
       this.updateMediaSessionPlaybackState('playing');
       this.syncPositionState(true);
@@ -160,14 +171,16 @@ class AudioEngine {
   public async loadTrack(track: Track, autoPlay = false) {
     this.currentTrack = track;
     this.currentCents = track.pitchCents;
+    this.hasEndedFired = false;
+    this.audioElement.loop = false;
     this.disablePitchPreservation();
 
     audioFeatureTimeline.resetTrack();
 
     if (this.audioElement.src !== track.objectUrl) {
       this.audioElement.src = track.objectUrl;
-      this.audioElement.currentTime = 0;
     }
+    this.audioElement.currentTime = 0;
 
     this.setPlaybackRateFromCents(track.pitchCents);
     this.setupMediaSession(track);
@@ -217,19 +230,48 @@ class AudioEngine {
     this.audioElement.pause();
   }
 
-  public restart() {
-    this.audioElement.currentTime = 0;
+  public async restart() {
+    this.hasEndedFired = false;
+    this.audioElement.loop = false;
     audioFeatureTimeline.notifySeek(0);
-    this.play();
-    this.syncPositionState(true);
+    this.disablePitchPreservation();
+
+    if (this.currentTrack) {
+      this.setPlaybackRateFromCents(this.currentTrack.pitchCents);
+    }
+
+    // Attempt 1: Direct seek to 0 and play
+    try {
+      this.audioElement.currentTime = 0;
+      await this.audioElement.play();
+      this.syncPositionState(true);
+      return;
+    } catch (err) {
+      console.warn('Direct restart play failed, attempting reload replay:', err);
+    }
+
+    // Attempt 2: Re-assign src and play (resets AVPlayer pipeline on iOS Safari)
+    try {
+      if (this.currentTrack) {
+        this.audioElement.src = this.currentTrack.objectUrl;
+        this.audioElement.currentTime = 0;
+        this.disablePitchPreservation();
+        this.setPlaybackRateFromCents(this.currentTrack.pitchCents);
+      }
+      await this.audioElement.play();
+      this.syncPositionState(true);
+    } catch (err2) {
+      console.warn('Fallback replay failed:', err2);
+    }
   }
 
-  public setLoop(loop: boolean) {
-    this.audioElement.loop = loop;
+  public setLoop(_loop: boolean) {
+    // Native loop is intentionally kept false to prevent iOS Safari blob stalls and guarantee ended events
+    this.audioElement.loop = false;
   }
 
   public getLoop(): boolean {
-    return this.audioElement.loop;
+    return false;
   }
 
   public seek(timeSeconds: number) {

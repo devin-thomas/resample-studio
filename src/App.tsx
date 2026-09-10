@@ -255,12 +255,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isChillMode]);
 
-  // Synchronize audio element native loop mode for gapless single-track / 1-track repeat
-  useEffect(() => {
-    const shouldLoop = repeatMode === 'one' || (repeatMode === 'all' && tracks.length === 1);
-    audioEngine.setLoop(shouldLoop);
-  }, [repeatMode, tracks.length]);
-
   // Previous Track
   const handlePrevTrack = useCallback(() => {
     if (tracks.length === 0) return;
@@ -281,6 +275,7 @@ export default function App() {
 
     const prevIdx = curIdx > 0 ? curIdx - 1 : tracks.length - 1;
     if (tracks[prevIdx].id === activeTrackId) {
+      setPlayback((prev) => ({ ...prev, isPlaying: true, currentTime: 0 }));
       audioEngine.restart();
       return;
     }
@@ -301,6 +296,7 @@ export default function App() {
 
     const nextIdx = curIdx < tracks.length - 1 ? curIdx + 1 : 0;
     if (tracks[nextIdx].id === activeTrackId) {
+      setPlayback((prev) => ({ ...prev, isPlaying: true, currentTime: 0 }));
       audioEngine.restart();
       return;
     }
@@ -313,6 +309,7 @@ export default function App() {
 
     if (repeatMode === 'one') {
       // Repeat One: Loop the single track continuously
+      setPlayback((prev) => ({ ...prev, isPlaying: true, currentTime: 0 }));
       audioEngine.restart();
       return;
     }
@@ -322,6 +319,7 @@ export default function App() {
     if (isShuffle) {
       if (tracks.length === 1) {
         if (repeatMode === 'all') {
+          setPlayback((prev) => ({ ...prev, isPlaying: true, currentTime: 0 }));
           audioEngine.restart();
         } else {
           audioEngine.pause();
@@ -345,6 +343,7 @@ export default function App() {
       if (repeatMode === 'all') {
         // Repeat All (Default): Loop back to track 0 and auto-play
         if (tracks.length === 1 || tracks[0].id === activeTrackId) {
+          setPlayback((prev) => ({ ...prev, isPlaying: true, currentTime: 0 }));
           audioEngine.restart();
         } else {
           autoPlayNextRef.current = true;

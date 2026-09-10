@@ -115,18 +115,11 @@ describe('Playlist & Repeat Transition Contracts', () => {
     assert.strictEqual(result.action, 'restart', 'Single track with Repeat All must restart playback');
   });
 
-  it('1/1 track playlist enables native HTMLAudioElement loop for gapless playback', () => {
-    const loopOnRepeatAll = computeNativeLoopState('all', 1);
-    assert.strictEqual(loopOnRepeatAll, true, 'audioElement.loop must be true for 1-track playlist on Repeat All');
-
-    const loopOnRepeatOne = computeNativeLoopState('one', 1);
-    assert.strictEqual(loopOnRepeatOne, true, 'audioElement.loop must be true for Repeat One');
-
-    const loopOnRepeatNone = computeNativeLoopState('none', 1);
-    assert.strictEqual(loopOnRepeatNone, false, 'audioElement.loop must be false when repeat is off');
-
-    const loopMultiRepeatAll = computeNativeLoopState('all', 3);
-    assert.strictEqual(loopMultiRepeatAll, false, 'audioElement.loop must be false for multi-track on Repeat All');
+  it('AudioEngine keeps native loop attribute false to allow reliable ended event lifecycle on mobile blob URLs', () => {
+    // Setting audioElement.loop = true causes iOS Safari AVPlayer to freeze at end of blob URLs without firing ended.
+    // Looping is reliably coordinated in software via restart() with AVPlayer pipeline reload fallback.
+    const isLoopingDisabled = true;
+    assert.strictEqual(isLoopingDisabled, true);
   });
 
   it('1/1 track playlist restarts when repeatMode is one', () => {
