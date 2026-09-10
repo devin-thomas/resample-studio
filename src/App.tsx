@@ -24,7 +24,7 @@ const DEFAULT_KNOB_SETTINGS: KnobSettings = {
   centsStep: 3,
   linkMode: 'pitch',
   capMode: 'basic',
-  basicCap: 1200,
+  basicCap: 400, // Default pitch bounds to +/- 400 cents (outer bounds 1200 still possible in advanced)
   advancedMinCents: -1200,
   advancedMaxCents: 1200,
   advancedMinSpeed: 25.0,

@@ -92,6 +92,22 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
     settings.capMode === 'basic' ? 400.0 : settings.advancedMaxSpeed;
 
   const stepPresets = [1, 2, 3, 4, 5, 6, 10, 12];
+  const quickPitchPresets = [-382, -200, -144, -32, 111, 168];
+
+  const handleQuickPitchSelect = (cents: number) => {
+    let targetCap = settings.basicCap;
+    if (settings.capMode === 'basic' && Math.abs(cents) > settings.basicCap) {
+      targetCap = Math.max(400, Math.abs(cents));
+    }
+    const newSpeed = centsToSpeedPercent(cents);
+    onChange({
+      ...settings,
+      basicCap: targetCap,
+      linkMode: 'pitch',
+      pitchCents: cents,
+      speedPercent: newSpeed,
+    });
+  };
 
   return (
     <div className="studio-glass rounded-2xl p-4 sm:p-6 flex flex-col gap-4">
@@ -244,8 +260,41 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
         </div>
       </div>
 
-      {/* Step Selector & Range Capping: 1–12 cents range */}
+      {/* Step Selector, Quick Pitch Presets & Range Capping */}
       <div className="bg-studio-900/70 rounded-2xl p-3.5 sm:p-4 border border-white/10 flex flex-col gap-3">
+        {/* Quick Select Cents Options */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-200">
+            <span className="font-bold text-[11px] sm:text-xs">QUICK PITCH SELECT:</span>
+            <span className="text-white font-bold text-xs bg-studio-950 px-2 py-0.5 rounded-md border border-white/10">
+              {settings.pitchCents > 0 ? `+${settings.pitchCents}` : settings.pitchCents} ¢
+            </span>
+          </div>
+
+          <div className="grid grid-cols-6 gap-1 sm:gap-1.5">
+            {quickPitchPresets.map((cents) => {
+              const isSelected = settings.pitchCents === cents;
+              return (
+                <button
+                  key={cents}
+                  type="button"
+                  onClick={() => handleQuickPitchSelect(cents)}
+                  className={`py-1 sm:py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer text-center ${
+                    isSelected
+                      ? 'bg-white text-black shadow-md shadow-white/20'
+                      : 'bg-studio-950 text-slate-200 hover:text-white border border-white/5 hover:border-white/20'
+                  }`}
+                  title={`Quick select ${cents > 0 ? `+${cents}` : cents}¢`}
+                >
+                  {cents > 0 ? `+${cents}` : cents}¢
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-white/10" />
+
         {/* Step Selector Row */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs font-mono text-slate-200">
@@ -329,6 +378,7 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
                 <option value={100}>±100¢ (±1st)</option>
                 <option value={200}>±200¢ (±2st)</option>
                 <option value={300}>±300¢ (±3st)</option>
+                <option value={400}>±400¢ (±4st - Default)</option>
                 <option value={500}>±500¢ (±5st - 4th)</option>
                 <option value={600}>±600¢ (±6st - tritone)</option>
                 <option value={700}>±700¢ (±7st - 5th)</option>
@@ -377,6 +427,23 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
                   }
                   className="w-20 px-2 py-1 bg-studio-900 border border-white/20 rounded-lg font-mono text-xs font-bold text-white"
                 />
+              </div>
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="text-[10px] text-slate-300">Quick:</span>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...settings, advancedMinCents: -400, advancedMaxCents: 400 })}
+                  className="px-2 py-0.5 rounded text-[10px] bg-studio-900 hover:bg-studio-800 text-slate-300 hover:text-white border border-white/10 font-bold cursor-pointer"
+                >
+                  ±400¢ (Default)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...settings, advancedMinCents: -1200, advancedMaxCents: 1200 })}
+                  className="px-2 py-0.5 rounded text-[10px] bg-studio-900 hover:bg-studio-800 text-slate-300 hover:text-white border border-white/10 font-bold cursor-pointer"
+                >
+                  ±1200¢ (Max Outer)
+                </button>
               </div>
             </div>
 
