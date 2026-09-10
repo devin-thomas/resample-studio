@@ -96,78 +96,92 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
     settings.capMode === 'basic' ? 400.0 : settings.advancedMaxSpeed;
 
   return (
-    <div className="studio-glass rounded-2xl p-6 flex flex-col gap-5">
+    <div className="studio-glass rounded-2xl p-4 sm:p-6 flex flex-col gap-4">
       {/* Top Header & Mode Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
-        <div className="flex items-center gap-2">
-          <Sliders className="w-5 h-5 text-cyan-400" />
-          <h2 className="font-semibold text-sm tracking-wide text-slate-100">
-            TACTILE VARISPEED DUAL CONTROLS
-          </h2>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div className="flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-white" />
+            <h2 className="font-bold text-xs sm:text-sm tracking-wider text-white uppercase">
+              Tactile Varispeed Controls
+            </h2>
+          </div>
 
-        {/* Link / Opposite / Independent Mode Toggle */}
-        <div className="flex items-center gap-1 bg-studio-900/90 p-1 rounded-xl border border-white/5">
+          {/* Reset Button on Mobile Header */}
           <button
             type="button"
-            onClick={() => handleModeChange('linked')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-              settings.linkMode === 'linked'
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="FL Studio Style: Pitch and Speed are physically coupled"
+            onClick={onReset}
+            className="sm:hidden p-1.5 rounded-lg bg-studio-900 hover:bg-studio-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+            title="Reset knobs to default"
           >
-            <Link className="w-3.5 h-3.5" />
-            <span>LINKED</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleModeChange('opposite')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-              settings.linkMode === 'opposite'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Opposite Mode: Pitch up speeds down, or pitch down speeds up"
-          >
-            <ArrowLeftRight className="w-3.5 h-3.5" />
-            <span>OPPOSITE</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleModeChange('independent')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-              settings.linkMode === 'independent'
-                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Independent Mode: Independent control"
-          >
-            <Unlink className="w-3.5 h-3.5" />
-            <span>INDEPENDENT</span>
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Quick Reset Button */}
-        <button
-          type="button"
-          onClick={onReset}
-          className="p-2 rounded-lg bg-studio-900/60 hover:bg-studio-800 border border-white/5 text-slate-400 hover:text-cyan-400 transition-all cursor-pointer"
-          title="Reset knobs to 0 cents / 100.0%"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
+        {/* Link / Opposite / Independent Mode Toggle + Desktop Reset */}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between">
+          <div className="flex items-center gap-1 bg-studio-950 p-1 rounded-xl border border-white/10 flex-1 sm:flex-initial">
+            <button
+              type="button"
+              onClick={() => handleModeChange('linked')}
+              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                settings.linkMode === 'linked'
+                  ? 'bg-studio-800 text-white border border-white/20 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Pitch and Speed are physically coupled"
+            >
+              <Link className="w-3.5 h-3.5 text-cyan-400" />
+              <span>LINKED</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleModeChange('opposite')}
+              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                settings.linkMode === 'opposite'
+                  ? 'bg-studio-800 text-white border border-white/20 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Opposite Mode: Pitch up speeds down"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-amber-400" />
+              <span>OPPOSITE</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleModeChange('independent')}
+              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                settings.linkMode === 'independent'
+                  ? 'bg-studio-800 text-white border border-white/20 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Independent Mode"
+            >
+              <Unlink className="w-3.5 h-3.5 text-purple-400" />
+              <span>INDEP</span>
+            </button>
+          </div>
+
+          {/* Desktop Reset Button */}
+          <button
+            type="button"
+            onClick={onReset}
+            className="hidden sm:flex p-2 rounded-xl bg-studio-950 hover:bg-studio-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+            title="Reset knobs to 0 cents / 100.0%"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Main Dual Knobs Area */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-2">
+      {/* Main Dual Knobs Area: Side-by-Side on both mobile and desktop (grid-cols-2) */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 py-1">
         {/* Pitch Knob */}
-        <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-studio-900/40 border border-white/5 relative">
+        <div className="flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl bg-studio-900/50 border border-white/10 relative">
           <Knob
-            label="PITCH RESAMPLE"
+            label="PITCH"
             value={settings.pitchCents}
             min={pitchMin}
             max={pitchMax}
@@ -177,17 +191,17 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
             decimals={0}
             accentColor="cyan"
             onChange={handlePitchChange}
-            formatDisplay={(val) => `${val > 0 ? '+' : ''}${val} ¢ (${(val / 100).toFixed(1)} st)`}
+            formatDisplay={(val) => `${val > 0 ? '+' : ''}${val}¢ (${(val / 100).toFixed(1)}st)`}
           />
-          <div className="mt-3 text-[11px] font-mono text-slate-500">
-            Step: <span className="text-cyan-400 font-semibold">{settings.centsStep} ¢</span>
+          <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-slate-300 text-center">
+            Step: <span className="text-white font-bold">{settings.centsStep}¢</span>
           </div>
         </div>
 
         {/* Speed Knob */}
-        <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-studio-900/40 border border-white/5 relative">
+        <div className="flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl bg-studio-900/50 border border-white/10 relative">
           <Knob
-            label="PLAYBACK SPEED"
+            label="SPEED"
             value={settings.speedPercent}
             min={speedMin}
             max={speedMax}
@@ -199,114 +213,123 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
             onChange={handleSpeedChange}
             formatDisplay={(val) => `${val.toFixed(1)}% (${(val / 100).toFixed(2)}x)`}
           />
-          <div className="mt-3 text-[11px] font-mono text-slate-500">
-            Resolution: <span className="text-amber-400 font-semibold">0.1%</span>
+          <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-slate-300 text-center">
+            Res: <span className="text-white font-bold">0.1%</span>
           </div>
         </div>
       </div>
 
-      {/* Step Selector (1 to 100) and Range Capping Controls */}
-      <div className="bg-studio-900/60 rounded-xl p-4 border border-white/5 flex flex-col gap-4">
-        {/* Step Selector 1-100 */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-            <span>CENTS STEP INCREMENT (1–100):</span>
-            <span className="text-cyan-400 font-bold">{settings.centsStep} ¢</span>
+      {/* Step Selector & Range Capping: Ergonomic & Zero-Overflow */}
+      <div className="bg-studio-900/70 rounded-2xl p-3.5 sm:p-4 border border-white/10 flex flex-col gap-3">
+        {/* Step Selector Row */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-200">
+            <span className="font-semibold text-[11px] sm:text-xs">STEP INCREMENT (1–100¢):</span>
+            <span className="text-white font-bold text-xs bg-studio-950 px-2 py-0.5 rounded-md border border-white/10">
+              {settings.centsStep} ¢
+            </span>
           </div>
-          <div className="flex items-center gap-1.5">
+
+          <div className="flex items-center gap-1.5 justify-between">
             {[1, 5, 10, 25, 50, 100].map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => handleStepChange(s)}
-                className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer ${
+                className={`flex-1 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer ${
                   settings.centsStep === s
-                    ? 'bg-cyan-500 text-black font-bold'
-                    : 'bg-studio-800 text-slate-400 hover:text-white border border-white/5'
+                    ? 'bg-white text-black font-bold shadow'
+                    : 'bg-studio-950 text-slate-300 hover:text-white border border-white/5 hover:border-white/20'
                 }`}
               >
                 {s}
               </button>
             ))}
+          </div>
+
+          {/* Fine Step Range Slider */}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[10px] font-mono text-slate-400">1¢</span>
             <input
               type="range"
               min="1"
               max="100"
               value={settings.centsStep}
               onChange={(e) => handleStepChange(Number(e.target.value))}
-              className="w-20 ml-2 accent-cyan-400 cursor-pointer"
+              className="flex-1 h-1.5 bg-studio-950 rounded-lg appearance-none cursor-pointer accent-white"
             />
+            <span className="text-[10px] font-mono text-slate-400">100¢</span>
           </div>
         </div>
 
         {/* Range Capping Selector: Basic vs Advanced */}
-        <div className="border-t border-white/5 pt-3 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-400">RANGE CAPPING:</span>
-            <div className="inline-flex rounded-lg bg-studio-950 p-0.5 border border-white/5">
+        <div className="border-t border-white/10 pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center justify-between sm:justify-start gap-2">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-200">RANGE:</span>
+            <div className="inline-flex rounded-xl bg-studio-950 p-0.5 border border-white/10">
               <button
                 type="button"
                 onClick={() => onChange({ ...settings, capMode: 'basic' })}
-                className={`px-3 py-1 text-xs font-mono rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-[11px] sm:text-xs font-mono rounded-lg transition-all cursor-pointer ${
                   settings.capMode === 'basic'
-                    ? 'bg-studio-800 text-cyan-400 font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-studio-800 text-white font-bold shadow-sm border border-white/10'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Basic (Symmetric Hundreds)
+                ±Hundreds
               </button>
               <button
                 type="button"
                 onClick={() => onChange({ ...settings, capMode: 'advanced' })}
-                className={`px-3 py-1 text-xs font-mono rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-[11px] sm:text-xs font-mono rounded-lg transition-all cursor-pointer ${
                   settings.capMode === 'advanced'
-                    ? 'bg-studio-800 text-cyan-400 font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-studio-800 text-white font-bold shadow-sm border border-white/10'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Advanced (Arbitrary Limits)
+                Custom
               </button>
             </div>
           </div>
 
           {settings.capMode === 'basic' ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-slate-400">Limit:</span>
+            <div className="flex items-center justify-between sm:justify-end gap-2">
+              <span className="text-xs font-mono text-slate-300">Limit:</span>
               <select
                 value={settings.basicCap}
                 onChange={(e) => handleBasicCapChange(Number(e.target.value))}
-                className="bg-studio-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs font-mono text-cyan-400 focus:outline-none focus:border-cyan-400"
+                className="bg-studio-950 border border-white/15 rounded-xl px-2.5 py-1 text-xs font-mono font-semibold text-white focus:outline-none focus:border-white"
               >
-                <option value={100}>±100 ¢ (±1 st)</option>
-                <option value={200}>±200 ¢ (±2 st)</option>
-                <option value={300}>±300 ¢ (±3 st)</option>
-                <option value={500}>±500 ¢ (±5 st - 4th)</option>
-                <option value={600}>±600 ¢ (±6 st - tritone)</option>
-                <option value={700}>±700 ¢ (±7 st - 5th)</option>
-                <option value={1200}>±1200 ¢ (±12 st - 1 Octave)</option>
+                <option value={100}>±100¢ (±1st)</option>
+                <option value={200}>±200¢ (±2st)</option>
+                <option value={300}>±300¢ (±3st)</option>
+                <option value={500}>±500¢ (±5st - 4th)</option>
+                <option value={600}>±600¢ (±6st - tritone)</option>
+                <option value={700}>±700¢ (±7st - 5th)</option>
+                <option value={1200}>±1200¢ (±12st - 1 Octave)</option>
               </select>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 hover:text-cyan-300 cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-mono text-white hover:text-slate-200 cursor-pointer self-start sm:self-auto"
             >
               <Settings2 className="w-3.5 h-3.5" />
-              <span>{showAdvanced ? 'Hide Config' : 'Configure Min / Max'}</span>
+              <span>{showAdvanced ? 'Hide Bounds' : 'Configure Bounds'}</span>
             </button>
           )}
         </div>
 
         {/* Advanced Limit Configuration Drawers */}
         {settings.capMode === 'advanced' && showAdvanced && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-white/5 bg-studio-950/60 p-4 rounded-xl">
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-mono text-slate-300 font-semibold">
-                Pitch Cents Bounds (-1200 to +1200):
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-white/10 bg-studio-950/80 p-3 rounded-xl">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-mono text-white font-semibold">
+                Pitch Bounds (-1200 to +1200¢):
               </span>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-mono text-slate-500">Min:</label>
+                <label className="text-xs font-mono text-slate-300">Min:</label>
                 <input
                   type="number"
                   min="-1200"
@@ -315,9 +338,9 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
                   onChange={(e) =>
                     onChange({ ...settings, advancedMinCents: Number(e.target.value) })
                   }
-                  className="w-20 px-2 py-1 bg-studio-900 border border-white/10 rounded font-mono text-xs text-cyan-400"
+                  className="w-20 px-2 py-1 bg-studio-900 border border-white/20 rounded-lg font-mono text-xs text-white"
                 />
-                <label className="text-xs font-mono text-slate-500 ml-2">Max:</label>
+                <label className="text-xs font-mono text-slate-300 ml-1">Max:</label>
                 <input
                   type="number"
                   min="0"
@@ -326,17 +349,17 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
                   onChange={(e) =>
                     onChange({ ...settings, advancedMaxCents: Number(e.target.value) })
                   }
-                  className="w-20 px-2 py-1 bg-studio-900 border border-white/10 rounded font-mono text-xs text-cyan-400"
+                  className="w-20 px-2 py-1 bg-studio-900 border border-white/20 rounded-lg font-mono text-xs text-white"
                 />
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-mono text-slate-300 font-semibold">
-                Speed Percentage Bounds (25.0% to 400.0%):
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-mono text-white font-semibold">
+                Speed Bounds (25% to 400%):
               </span>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-mono text-slate-500">Min:</label>
+                <label className="text-xs font-mono text-slate-300">Min:</label>
                 <input
                   type="number"
                   step="0.1"
@@ -346,9 +369,9 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
                   onChange={(e) =>
                     onChange({ ...settings, advancedMinSpeed: Number(e.target.value) })
                   }
-                  className="w-20 px-2 py-1 bg-studio-900 border border-white/10 rounded font-mono text-xs text-amber-400"
+                  className="w-20 px-2 py-1 bg-studio-900 border border-white/20 rounded-lg font-mono text-xs text-white"
                 />
-                <label className="text-xs font-mono text-slate-500 ml-2">Max:</label>
+                <label className="text-xs font-mono text-slate-300 ml-1">Max:</label>
                 <input
                   type="number"
                   step="0.1"
@@ -358,7 +381,7 @@ export const KnobControlPanel: React.FC<KnobControlPanelProps> = ({
                   onChange={(e) =>
                     onChange({ ...settings, advancedMaxSpeed: Number(e.target.value) })
                   }
-                  className="w-20 px-2 py-1 bg-studio-900 border border-white/10 rounded font-mono text-xs text-amber-400"
+                  className="w-20 px-2 py-1 bg-studio-900 border border-white/20 rounded-lg font-mono text-xs text-white"
                 />
               </div>
             </div>

@@ -80,3 +80,19 @@ Decision: Increase the lerp smoothing factor from 0.05 to 0.12 for snappier resp
 Reason: The interaction should feel physical — like pushing a suspended object. Quick mouse movements should create visible, satisfying responses, and the scene should coast to a stop rather than freezing the instant the mouse stops.
 
 Consequences: Maximum velocity is clamped to prevent disorienting spin. Touch interaction on mobile uses the same momentum system.
+
+## 8. Native Hardware Output for iOS Background Audio & Buffer-Based Analysis
+
+Status: accepted
+
+Context: When audio is routed through `AudioContext.createMediaElementSource()` into `audioCtx.destination`, iOS Safari aggressively suspends the `AudioContext` when the user locks their screen, switches apps, or leaves Safari, causing immediate silence. In Resample Studio Lite, audio played continuously in the background because the `HTMLAudioElement` was appended directly to the DOM and played natively to the hardware output without Web Audio destination routing.
+
+Decision:
+1. The `HTMLAudioElement` outputs directly to hardware speakers with `playsinline`, `webkit-playsinline`, and `id="resample-media-player"`. It is never routed through `createMediaElementSource(el).connect(destination)`.
+2. AudioBuffer is decoded asynchronously on track load for real-time waveform extraction and discrete spectral FFT analysis while the page is visible.
+3. Full MediaSession integration with 512x512 vinyl artwork, live position syncing, and Lock Screen / Dynamic Island controls (`play`, `pause`, `previoustrack`, `seekto`).
+
+Reason: Guarantees 100% reliable background playback on iOS when leaving Safari or locking the device, while still providing rich real-time frequency reactivity for Three.js when the app is active.
+
+Consequences: Background playback is rock solid. Real-time visualizer data is decoupled from audio output hardware routing.
+

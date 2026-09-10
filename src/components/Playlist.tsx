@@ -84,10 +84,10 @@ export const Playlist: React.FC<PlaylistProps> = ({
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-3">
+      <div className="flex items-center justify-between border-b border-white/10 pb-3">
         <div className="flex items-center gap-2">
-          <Music className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-xs font-semibold tracking-wider text-slate-200 uppercase">
+          <Music className="w-4 h-4 text-white" />
+          <h3 className="text-xs font-bold tracking-wider text-white uppercase">
             PLAYLIST QUEUE ({tracks.length})
           </h3>
         </div>
@@ -95,7 +95,7 @@ export const Playlist: React.FC<PlaylistProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="px-2.5 py-1 rounded-lg bg-studio-800 hover:bg-studio-700 text-cyan-400 border border-white/5 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-studio-800 hover:bg-studio-700 text-white border border-white/10 text-xs font-mono font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
         >
           <Upload className="w-3.5 h-3.5" />
           <span>Add Audio</span>
@@ -104,20 +104,20 @@ export const Playlist: React.FC<PlaylistProps> = ({
 
       {/* Select All Export Mix bar if tracks exist */}
       {tracks.length > 0 && (
-        <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+        <div className="flex items-center justify-between text-xs font-mono text-slate-300 px-1">
           <button
             type="button"
             onClick={() => onToggleSelectAllExport(!allSelectedForExport)}
-            className="flex items-center gap-1.5 hover:text-white transition-all cursor-pointer"
+            className="flex items-center gap-1.5 text-white hover:text-slate-200 transition-all cursor-pointer font-medium"
           >
             {allSelectedForExport ? (
-              <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
+              <CheckSquare className="w-4 h-4 text-white" />
             ) : (
-              <Square className="w-3.5 h-3.5 text-slate-500" />
+              <Square className="w-4 h-4 text-slate-400" />
             )}
             <span>Select All For Mix</span>
           </button>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-slate-400">
             {tracks.filter((t) => t.selectedForExport).length} selected
           </span>
         </div>
@@ -128,11 +128,11 @@ export const Playlist: React.FC<PlaylistProps> = ({
         {tracks.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="h-48 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center p-6 text-center text-slate-400 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all cursor-pointer"
+            className="h-48 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center p-6 text-center text-slate-400 hover:border-white/30 hover:bg-white/5 transition-all cursor-pointer"
           >
-            <Upload className="w-8 h-8 text-slate-500 mb-2" />
-            <p className="text-sm font-medium text-slate-300">Drop audio files here</p>
-            <p className="text-xs text-slate-500 mt-1 font-mono">
+            <Upload className="w-8 h-8 text-slate-400 mb-2" />
+            <p className="text-sm font-semibold text-white">Drop audio files here</p>
+            <p className="text-xs text-slate-400 mt-1 font-mono">
               Supports MP3, WAV, AAC, M4A
             </p>
           </div>
@@ -146,19 +146,19 @@ export const Playlist: React.FC<PlaylistProps> = ({
                 key={track.id}
                 className={`group flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
                   isActive
-                    ? 'bg-studio-800/90 border-cyan-500/40 shadow-sm shadow-cyan-500/10'
-                    : 'bg-studio-900/40 border-white/5 hover:border-white/15'
+                    ? 'bg-studio-800 border-white/25 shadow-md shadow-black/40'
+                    : 'bg-studio-900/50 border-white/5 hover:border-white/15'
                 }`}
               >
                 {/* Export Checkbox */}
                 <button
                   type="button"
                   onClick={() => onToggleTrackExportSelection(track.id)}
-                  className="text-slate-500 hover:text-cyan-400 p-1 cursor-pointer"
+                  className="text-slate-400 hover:text-white p-1 cursor-pointer"
                   title="Include in selective mix export"
                 >
                   {track.selectedForExport ? (
-                    <CheckSquare className="w-4 h-4 text-cyan-400" />
+                    <CheckSquare className="w-4 h-4 text-white" />
                   ) : (
                     <Square className="w-4 h-4" />
                   )}
@@ -176,8 +176,8 @@ export const Playlist: React.FC<PlaylistProps> = ({
                   }}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-all ${
                     isActive && isPlaying
-                      ? 'bg-cyan-500 text-black'
-                      : 'bg-studio-800 text-slate-300 hover:bg-studio-700'
+                      ? 'bg-white text-black font-bold shadow'
+                      : 'bg-studio-800 text-white hover:bg-studio-700'
                   }`}
                 >
                   {isActive && isPlaying ? (
@@ -194,26 +194,26 @@ export const Playlist: React.FC<PlaylistProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs font-medium truncate ${
-                        isActive ? 'text-cyan-300 font-semibold' : 'text-slate-200'
+                      className={`text-xs font-semibold truncate ${
+                        isActive ? 'text-white' : 'text-slate-200'
                       }`}
                       title={track.name}
                     >
                       {track.name}
                     </span>
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-studio-950 text-slate-400 font-mono">
+                    <span className="text-[9px] px-1 py-0.5 rounded bg-studio-950 text-slate-300 font-mono font-bold border border-white/5">
                       {format}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 mt-0.5">
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-slate-300 mt-0.5">
                     <span>{formatTime(track.duration)}</span>
                     <span>•</span>
                     <span>{formatFileSize(track.size)}</span>
                     <span>•</span>
                     <span
                       className={
-                        track.pitchCents !== 0 ? 'text-cyan-400' : 'text-slate-500'
+                        track.pitchCents !== 0 ? 'text-white font-semibold' : 'text-slate-400'
                       }
                     >
                       {track.pitchCents > 0 ? `+${track.pitchCents}` : track.pitchCents}¢
@@ -221,7 +221,7 @@ export const Playlist: React.FC<PlaylistProps> = ({
                     <span>•</span>
                     <span
                       className={
-                        track.speedPercent !== 100.0 ? 'text-amber-400' : 'text-slate-500'
+                        track.speedPercent !== 100.0 ? 'text-white font-semibold' : 'text-slate-400'
                       }
                     >
                       {track.speedPercent.toFixed(1)}%
@@ -235,8 +235,8 @@ export const Playlist: React.FC<PlaylistProps> = ({
                   onClick={() => onToggleTrackLock(track.id)}
                   className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                     track.isLocked
-                      ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-                      : 'bg-studio-950/60 text-slate-500 border-white/5 hover:text-slate-300'
+                      ? 'bg-white/10 text-white border-white/30'
+                      : 'bg-studio-950/60 text-slate-400 border-white/5 hover:text-white'
                   }`}
                   title={
                     track.isLocked
@@ -245,7 +245,7 @@ export const Playlist: React.FC<PlaylistProps> = ({
                   }
                 >
                   {track.isLocked ? (
-                    <Lock className="w-3.5 h-3.5" />
+                    <Lock className="w-3.5 h-3.5 text-white" />
                   ) : (
                     <Unlock className="w-3.5 h-3.5" />
                   )}

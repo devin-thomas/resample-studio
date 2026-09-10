@@ -367,7 +367,7 @@ export const AudioVisualizer: React.FC = () => {
       />
 
       {/* Floating Visualizer Controls Pill */}
-      <div className="fixed bottom-20 right-4 z-30 flex items-center gap-1.5 bg-studio-950/70 backdrop-blur-md p-1 rounded-xl border border-white/10">
+      <div className="fixed bottom-24 sm:bottom-22 right-3 sm:right-4 z-30 flex items-center gap-1.5 bg-studio-950/80 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-lg">
         {(['vortex', 'sphere', 'grid'] as VisualizerMode[]).map((m) => (
           <button
             key={m}

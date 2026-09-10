@@ -299,7 +299,7 @@ export default function App() {
       />
 
       {/* Studio Header */}
-      <header className="border-b border-white/10 bg-studio-900/80 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+      <header className="border-b border-white/10 bg-studio-900/90 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
             <Disc3
@@ -308,10 +308,12 @@ export default function App() {
             />
           </div>
           <div>
-            <h1 className="font-bold text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="font-bold text-base sm:text-lg tracking-tight text-white">
               RESAMPLE STUDIO
             </h1>
-            <p className="text-[10px] text-slate-400 font-mono">PRO VARISPEED & MIX LAB</p>
+            <p className="text-[10px] text-slate-300 font-mono font-semibold tracking-wider">
+              PRO VARISPEED & MIX LAB
+            </p>
           </div>
         </div>
 
@@ -325,16 +327,16 @@ export default function App() {
               setTracks((prev) => [...prev, demo]);
               setActiveTrackId(demo.id);
             }}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-studio-800 hover:bg-studio-700 border border-white/5 text-xs text-slate-300 font-mono transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-studio-800 hover:bg-studio-700 border border-white/10 text-xs text-white font-mono font-semibold transition-all cursor-pointer shadow-sm"
             title="Load demo electronic groove"
           >
-            <PlaySquare className="w-3.5 h-3.5 text-cyan-400" />
+            <PlaySquare className="w-3.5 h-3.5 text-white" />
             <span>Load Demo</span>
           </button>
 
           {/* 120Hz Indicator */}
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-studio-800/80 border border-white/5 text-xs text-cyan-400 font-mono">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-studio-800/80 border border-white/10 text-xs text-white font-mono font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             <span>120Hz ENGINE</span>
           </div>
 
@@ -343,7 +345,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsExportModalOpen(true)}
-              className="py-1.5 px-3 sm:px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+              className="py-1.5 px-3 sm:px-4 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-white/10 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export Mix</span>
@@ -354,14 +356,14 @@ export default function App() {
 
       {/* Mobile Tab Switcher (Visible on mobile only, hidden when empty) */}
       {tracks.length > 0 && (
-        <div className="lg:hidden flex border-b border-white/10 bg-studio-900/60 backdrop-blur-md px-4 py-2 gap-2 relative z-10">
+        <div className="lg:hidden flex border-b border-white/10 bg-studio-900/80 backdrop-blur-md px-4 py-2 gap-2 relative z-10">
           <button
             type="button"
             onClick={() => setMobileTab('controls')}
             className={`flex-1 py-2 rounded-xl text-xs font-mono flex items-center justify-center gap-2 transition-all ${
               mobileTab === 'controls'
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-semibold'
-                : 'text-slate-400 bg-studio-900/40'
+                ? 'bg-white text-black font-bold shadow'
+                : 'text-slate-300 bg-studio-900/60 border border-white/5'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
@@ -372,8 +374,8 @@ export default function App() {
             onClick={() => setMobileTab('playlist')}
             className={`flex-1 py-2 rounded-xl text-xs font-mono flex items-center justify-center gap-2 transition-all ${
               mobileTab === 'playlist'
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-semibold'
-                : 'text-slate-400 bg-studio-900/40'
+                ? 'bg-white text-black font-bold shadow'
+                : 'text-slate-300 bg-studio-900/60 border border-white/5'
             }`}
           >
             <Music className="w-3.5 h-3.5" />
@@ -383,7 +385,7 @@ export default function App() {
       )}
 
       {/* Main Studio Work Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 relative z-10 mb-24">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 relative z-10 mb-32 sm:mb-28">
         {tracks.length === 0 ? (
           /* ============================================ */
           /* EMPTY STATE: Upload-First (ADR 5, T-09)     */
@@ -401,42 +403,42 @@ export default function App() {
                 }
               }}
               onClick={() => fileInputRef.current?.click()}
-              className={`group cursor-pointer w-full max-w-lg rounded-2xl border-2 border-dashed p-10 sm:p-14 text-center transition-all duration-200 touch-manipulation backdrop-blur-xl ${
+              className={`group cursor-pointer w-full max-w-lg rounded-2xl border-2 border-dashed p-8 sm:p-14 text-center transition-all duration-200 touch-manipulation backdrop-blur-xl ${
                 isDragOver
-                  ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01]'
-                  : 'border-white/15 bg-studio-900/60 hover:border-white/30 hover:bg-studio-900/80'
+                  ? 'border-white bg-white/10 scale-[1.01]'
+                  : 'border-white/20 bg-studio-900/70 hover:border-white/40 hover:bg-studio-900/90'
               }`}
             >
               <div className="flex flex-col items-center justify-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:scale-110 transition-transform">
+                <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-black/40">
                   <UploadCloud className="w-7 h-7" />
                 </div>
                 <div>
-                  <p className="text-lg font-medium text-slate-200 group-hover:text-white">
+                  <p className="text-lg font-bold text-white">
                     Choose your audio files
                   </p>
-                  <p className="text-sm text-slate-400 mt-1.5">
+                  <p className="text-sm text-slate-300 mt-1.5 font-medium">
                     Tap to browse or drop{' '}
-                    <span className="text-slate-200 font-semibold">.mp3</span>,{' '}
-                    <span className="text-slate-200 font-semibold">.wav</span>,{' '}
-                    <span className="text-slate-200 font-semibold">.aac</span>, or{' '}
-                    <span className="text-slate-200 font-semibold">.m4a</span>
+                    <span className="text-white font-bold">.mp3</span>,{' '}
+                    <span className="text-white font-bold">.wav</span>,{' '}
+                    <span className="text-white font-bold">.aac</span>, or{' '}
+                    <span className="text-white font-bold">.m4a</span>
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-[11px] text-slate-400 font-mono">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[11px] text-white font-mono font-medium border border-white/10">
                   <span>Local-first • Processed in browser</span>
                 </div>
               </div>
             </div>
 
             {/* Idle Guidance Card */}
-            <div className="w-full max-w-lg rounded-2xl bg-studio-900/40 backdrop-blur-md border border-white/5 p-5 text-center">
-              <p className="text-xs font-medium text-slate-300">
+            <div className="w-full max-w-lg rounded-2xl bg-studio-900/50 backdrop-blur-md border border-white/10 p-5 text-center shadow-lg shadow-black/40">
+              <p className="text-xs font-bold text-white">
                 Mathematical Varispeed Resampler
               </p>
-              <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
+              <p className="text-[11px] text-slate-300 leading-relaxed mt-1.5 font-medium">
                 Tape-style speed & pitch locking using{' '}
-                <code className="text-cyan-300 font-mono text-[10px]">
+                <code className="text-white font-mono font-bold text-[10px] bg-white/10 px-1.5 py-0.5 rounded">
                   ratio = 2 ** (cents / 1200)
                 </code>
                 . Audition, manipulate, and export high-bitrate MP3s directly on iPhone or desktop.
@@ -455,16 +457,16 @@ export default function App() {
               }`}
             >
               {/* Compact Loaded File Card */}
-              <div className="studio-glass rounded-2xl p-4 backdrop-blur-xl flex items-center justify-between gap-3">
+              <div className="studio-glass rounded-2xl p-3.5 sm:p-4 backdrop-blur-xl flex items-center justify-between gap-3 border border-white/10">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0">
-                    <Music className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white flex-shrink-0">
+                    <Music className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-100 truncate">
+                    <p className="text-xs sm:text-sm font-bold text-white truncate" title={activeTrack?.name}>
                       {activeTrack?.name || 'Select a track'}
                     </p>
-                    <p className="text-xs text-slate-400 font-mono mt-0.5">
+                    <p className="text-[11px] text-slate-300 font-mono mt-0.5">
                       {tracks.length} track{tracks.length !== 1 ? 's' : ''} loaded
                     </p>
                   </div>
@@ -472,7 +474,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-xl bg-studio-800 hover:bg-studio-700 text-slate-300 hover:text-white border border-white/10 transition active:scale-95 touch-manipulation cursor-pointer"
+                  className="flex-shrink-0 px-3 py-1.5 text-xs font-bold rounded-xl bg-white text-black hover:bg-slate-200 transition active:scale-95 touch-manipulation cursor-pointer shadow-sm"
                 >
                   Add More
                 </button>
@@ -508,20 +510,22 @@ export default function App() {
               />
 
               {/* Concatenation Mix Quick Launcher */}
-              <div className="studio-glass rounded-2xl p-5 backdrop-blur-xl flex flex-col gap-3">
+              <div className="studio-glass rounded-2xl p-5 backdrop-blur-xl flex flex-col gap-3 border border-white/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+                  <span className="text-xs font-mono text-white font-bold uppercase tracking-wider">
                     SELECTIVE MIX EXPORT
                   </span>
-                  <span className="text-xs font-mono text-cyan-400">≤ 320 KBPS MP3</span>
+                  <span className="text-xs font-mono text-white font-bold bg-white/10 px-2 py-0.5 rounded border border-white/10">
+                    ≤ 320 KBPS MP3
+                  </span>
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-300 font-medium">
                   Combine any track subset into a seamless varispeed mix export with per-track or global pitch.
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsExportModalOpen(true)}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs font-mono flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-white text-black hover:bg-slate-200 font-bold text-xs font-mono flex items-center justify-center gap-2 shadow-lg shadow-white/10 transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   <span>Configure & Export Mix</span>

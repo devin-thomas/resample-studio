@@ -150,15 +150,15 @@ export const Knob: React.FC<KnobProps> = ({
     : `${decimals > 0 ? value.toFixed(decimals) : value} ${unit}`;
 
   return (
-    <div className="flex flex-col items-center select-none group">
-      <span className="text-[11px] font-mono tracking-wider text-slate-400 uppercase mb-2">
+    <div className="flex flex-col items-center select-none group w-full">
+      <span className="text-[10px] sm:text-[11px] font-mono tracking-wider text-slate-200 uppercase mb-1.5 font-semibold">
         {label}
       </span>
 
-      {/* Rotary Knob Body */}
+      {/* Rotary Knob Body with Responsive Sizing */}
       <div
         ref={knobRef}
-        className={`relative w-28 h-28 rounded-full flex items-center justify-center cursor-ns-resize touch-none select-none transition-shadow duration-300 ${
+        className={`relative w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center cursor-ns-resize touch-none select-none transition-shadow duration-300 ${
           isDragging ? colorStyles.glow : 'hover:shadow-lg hover:shadow-black/60'
         }`}
         onPointerDown={handlePointerDown}
@@ -199,26 +199,26 @@ export const Knob: React.FC<KnobProps> = ({
 
         {/* Inner Physical Dial */}
         <div
-          className="absolute w-20 h-20 rounded-full bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border border-white/10 shadow-inner flex items-center justify-center pointer-events-none"
+          className="absolute w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border border-white/10 shadow-inner flex items-center justify-center pointer-events-none"
           style={{ transform: `rotate(${angle}deg)` }}
         >
           {/* Beveled Rim */}
           <div className="absolute inset-1 rounded-full border border-white/5 bg-gradient-to-tr from-slate-900 to-slate-800" />
-          
+
           {/* Position Indicator Notch */}
           <div
-            className={`absolute top-2 w-1.5 h-3.5 rounded-full bg-gradient-to-b ${colorStyles.gradient} shadow-[0_0_8px_currentColor]`}
+            className={`absolute top-1 sm:top-2 w-1 sm:w-1.5 h-2.5 sm:h-3.5 rounded-full bg-gradient-to-b ${colorStyles.gradient} shadow-[0_0_8px_currentColor]`}
           />
 
           {/* Center Cap */}
-          <div className="w-6 h-6 rounded-full bg-slate-950/80 border border-white/10 flex items-center justify-center">
-            <div className={`w-1.5 h-1.5 rounded-full bg-${accentColor}-400/80`} />
+          <div className="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-slate-950/80 border border-white/10 flex items-center justify-center">
+            <div className={`w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full bg-${accentColor}-400/80`} />
           </div>
         </div>
       </div>
 
-      {/* Interactive Value Badge / Direct Input */}
-      <div className="mt-3 flex items-center justify-center">
+      {/* Interactive Value Badge / Direct Input - White Font */}
+      <div className="mt-2 flex items-center justify-center">
         {isEditing ? (
           <input
             type="number"
@@ -230,13 +230,13 @@ export const Knob: React.FC<KnobProps> = ({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleCommitEdit}
             onKeyDown={handleKeyDown}
-            className="w-24 px-2 py-1 text-center font-mono text-sm bg-studio-900 border border-cyan-400 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-400"
+            className="w-24 px-2 py-1 text-center font-mono text-xs sm:text-sm bg-studio-900 border border-white/40 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-white"
           />
         ) : (
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className={`px-3 py-1 rounded-lg bg-studio-900/80 hover:bg-studio-800 border border-white/10 hover:border-white/20 transition-all font-mono text-sm font-semibold ${colorStyles.text} cursor-text`}
+            className="px-2.5 py-1 rounded-lg bg-studio-900/90 hover:bg-studio-800 border border-white/15 hover:border-white/30 transition-all font-mono text-xs sm:text-sm font-bold text-white shadow-sm cursor-text tracking-tight"
             title="Click to type exact number"
           >
             {displayString}
@@ -245,7 +245,7 @@ export const Knob: React.FC<KnobProps> = ({
       </div>
 
       {/* Min / Max bounds subtitle */}
-      <div className="flex items-center justify-between w-28 mt-1 text-[10px] font-mono text-slate-500">
+      <div className="flex items-center justify-between w-20 sm:w-28 mt-1 text-[10px] font-mono text-slate-400">
         <span>{min}</span>
         <span>{max}</span>
       </div>

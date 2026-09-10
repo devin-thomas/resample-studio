@@ -2,27 +2,101 @@ import { Track } from '../types/audio';
 
 export type AudioEventCallback = () => void;
 
+/**
+ * Generate 512x512 vinyl artwork for iOS Dynamic Island and Lock Screen
+ */
+function generateArtworkDataUri(title: string): string {
+  if (typeof document === 'undefined') return '';
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // Dark studio gradient
+    const grad = ctx.createLinearGradient(0, 0, 512, 512);
+    grad.addColorStop(0, '#111318');
+    grad.addColorStop(1, '#07090e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Vinyl grooves
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.lineWidth = 2;
+    for (let r = 70; r < 230; r += 14) {
+      ctx.beginPath();
+      ctx.arc(256, 256, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Outer cyan accent ring
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(256, 256, 170, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Center hub
+    ctx.fillStyle = '#00f0ff';
+    ctx.beginPath();
+    ctx.arc(256, 256, 42, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Spindle hole
+    ctx.fillStyle = '#07090e';
+    ctx.beginPath();
+    ctx.arc(256, 256, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Typography
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+    ctx.textAlign = 'center';
+    const displayTitle = title.length > 20 ? title.substring(0, 19) + '…' : title;
+    ctx.fillText(displayTitle.toUpperCase(), 256, 420);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
+    ctx.fillText('RESAMPLE STUDIO', 256, 455);
+
+    return canvas.toDataURL('image/png');
+  } catch {
+    return '';
+  }
+}
+
 class AudioEngine {
-  private audioCtx: AudioContext | null = null;
   private audioElement: HTMLAudioElement;
-  private sourceNode: MediaElementAudioSourceNode | null = null;
-  private analyserNode: AnalyserNode | null = null;
-  private gainNode: GainNode | null = null;
-  private isContextInitialized = false;
+  private audioCtx: AudioContext | null = null;
+  private currentBuffer: AudioBuffer | null = null;
+  private currentTrack: Track | null = null;
+  private currentCents = 0;
+  private lastPositionSync = 0;
 
   private onTimeUpdateCbs: Set<(currentTime: number, duration: number) => void> = new Set();
   private onTrackEndedCbs: Set<() => void> = new Set();
   private onPlayStateChangeCbs: Set<(isPlaying: boolean) => void> = new Set();
 
   constructor() {
-    this.audioElement = new Audio();
+    this.audioElement = document.createElement('audio');
+    this.audioElement.id = 'resample-media-player';
     this.audioElement.preload = 'auto';
+    this.audioElement.style.display = 'none';
+
+    // Critical iOS Safari attributes for persistent background playback
+    (this.audioElement as any).playsInline = true;
+    (this.audioElement as any).webkitPlaysInline = true;
+    this.audioElement.setAttribute('playsinline', 'true');
+    this.audioElement.setAttribute('webkit-playsinline', 'true');
+
     this.disablePitchPreservation();
 
     this.audioElement.addEventListener('timeupdate', () => {
       const cur = this.audioElement.currentTime;
       const dur = this.audioElement.duration || 0;
       this.onTimeUpdateCbs.forEach((cb) => cb(cur, dur));
+      this.syncPositionState();
     });
 
     this.audioElement.addEventListener('ended', () => {
@@ -32,12 +106,28 @@ class AudioEngine {
     this.audioElement.addEventListener('play', () => {
       this.onPlayStateChangeCbs.forEach((cb) => cb(true));
       this.updateMediaSessionPlaybackState('playing');
+      this.syncPositionState(true);
     });
 
     this.audioElement.addEventListener('pause', () => {
       this.onPlayStateChangeCbs.forEach((cb) => cb(false));
       this.updateMediaSessionPlaybackState('paused');
+      this.syncPositionState(true);
     });
+
+    this.audioElement.addEventListener('ratechange', () => {
+      this.syncPositionState(true);
+    });
+
+    if (typeof document !== 'undefined') {
+      if (document.body) {
+        document.body.appendChild(this.audioElement);
+      } else {
+        window.addEventListener('DOMContentLoaded', () => {
+          document.body.appendChild(this.audioElement);
+        });
+      }
+    }
   }
 
   private disablePitchPreservation() {
@@ -50,67 +140,64 @@ class AudioEngine {
     if ('webkitPreservesPitch' in el) el.webkitPreservesPitch = false;
   }
 
-  public initContext(): AudioContext {
+  private getAudioContext(): AudioContext {
     if (!this.audioCtx) {
-      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtxClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.audioCtx = new AudioCtxClass();
-      
-      this.analyserNode = this.audioCtx.createAnalyser();
-      this.analyserNode.fftSize = 256;
-      this.analyserNode.smoothingTimeConstant = 0.8;
-
-      this.gainNode = this.audioCtx.createGain();
-      this.gainNode.gain.value = 1.0;
-
-      // Connect HTMLAudioElement -> SourceNode -> GainNode -> AnalyserNode -> Destination
-      try {
-        this.sourceNode = this.audioCtx.createMediaElementSource(this.audioElement);
-        this.sourceNode.connect(this.gainNode);
-        this.gainNode.connect(this.analyserNode);
-        this.analyserNode.connect(this.audioCtx.destination);
-      } catch (err) {
-        console.warn('MediaElementSource already connected or error:', err);
-      }
-      this.isContextInitialized = true;
     }
-
     if (this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+      this.audioCtx.resume().catch(() => {});
     }
-
     return this.audioCtx;
   }
 
-  public getAnalyser(): AnalyserNode | null {
-    if (!this.isContextInitialized) {
-      this.initContext();
-    }
-    return this.analyserNode;
-  }
-
-  public loadTrack(track: Track, autoPlay = false) {
+  public async loadTrack(track: Track, autoPlay = false) {
+    this.currentTrack = track;
+    this.currentCents = track.pitchCents;
     this.disablePitchPreservation();
+
     if (this.audioElement.src !== track.objectUrl) {
       this.audioElement.src = track.objectUrl;
+      this.audioElement.currentTime = 0;
     }
-    
-    // Apply track specific rate
-    this.setPlaybackRateFromCents(track.pitchCents);
 
+    this.setPlaybackRateFromCents(track.pitchCents);
     this.setupMediaSession(track);
 
+    // Asynchronously decode audio data for real-time visualization & analysis
+    this.decodeTrackBuffer(track);
+
     if (autoPlay) {
-      this.play();
+      await this.play();
+    }
+  }
+
+  private async decodeTrackBuffer(track: Track) {
+    try {
+      let arrayBuf: ArrayBuffer;
+      if (track.file) {
+        arrayBuf = await track.file.arrayBuffer();
+      } else {
+        const resp = await fetch(track.objectUrl);
+        arrayBuf = await resp.arrayBuffer();
+      }
+
+      const ctx = this.getAudioContext();
+      this.currentBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
+    } catch (e) {
+      console.warn('AudioBuffer decoding for visualizer failed (playback unaffected):', e);
+      this.currentBuffer = null;
     }
   }
 
   public async play() {
-    this.initContext();
     this.disablePitchPreservation();
     try {
       await this.audioElement.play();
     } catch (e) {
-      console.warn('Audio play prevented (user gesture needed):', e);
+      console.warn('Playback play prevented (user interaction required):', e);
     }
   }
 
@@ -118,43 +205,97 @@ class AudioEngine {
     this.audioElement.pause();
   }
 
+  public restart() {
+    this.audioElement.currentTime = 0;
+    if (this.audioElement.paused) {
+      this.play();
+    }
+    this.syncPositionState(true);
+  }
+
   public seek(timeSeconds: number) {
     if (!isNaN(timeSeconds) && isFinite(timeSeconds)) {
-      this.audioElement.currentTime = Math.max(0, Math.min(timeSeconds, this.audioElement.duration || 0));
+      const dur = this.audioElement.duration || 0;
+      this.audioElement.currentTime = Math.max(0, Math.min(timeSeconds, dur));
+      this.syncPositionState(true);
     }
   }
 
   public setVolume(val: number) {
-    const clamped = Math.max(0, Math.min(1, val));
-    this.audioElement.volume = clamped;
+    this.audioElement.volume = Math.max(0, Math.min(1, val));
   }
 
   public setPlaybackRate(rate: number) {
-    // Varispeed requires preservesPitch = false
     this.disablePitchPreservation();
     const clamped = Math.max(0.25, Math.min(4.0, rate));
     this.audioElement.playbackRate = clamped;
   }
 
   public setPlaybackRateFromCents(cents: number) {
-    // Rate = 2 ^ (cents / 1200)
+    this.currentCents = cents;
     const rate = Math.pow(2, cents / 1200);
     this.setPlaybackRate(rate);
+    this.updateMediaSessionMetadata();
   }
 
-  public getFrequencyData(outArray: Uint8Array<ArrayBuffer>): void {
-    if (this.analyserNode) {
-      this.analyserNode.getByteFrequencyData(outArray);
-    } else {
-      outArray.fill(0);
+  /**
+   * Extract real-time waveform data from the decoded PCM buffer at the current playback position.
+   */
+  public getWaveformData(outArray: Uint8Array<ArrayBuffer>): void {
+    if (!this.currentBuffer || this.audioElement.paused) {
+      outArray.fill(128);
+      return;
+    }
+
+    const channelData = this.currentBuffer.getChannelData(0);
+    const sampleRate = this.currentBuffer.sampleRate;
+    const currentSample = Math.floor(this.audioElement.currentTime * sampleRate);
+    const count = outArray.length;
+
+    for (let i = 0; i < count; i++) {
+      const idx = currentSample + i * 2;
+      const sample = idx >= 0 && idx < channelData.length ? channelData[idx] : 0;
+      // Map float [-1.0, 1.0] to unsigned byte [0, 255]
+      outArray[i] = Math.max(0, Math.min(255, Math.floor((sample + 1) * 127.5)));
     }
   }
 
-  public getWaveformData(outArray: Uint8Array<ArrayBuffer>): void {
-    if (this.analyserNode) {
-      this.analyserNode.getByteTimeDomainData(outArray);
-    } else {
-      outArray.fill(128);
+  /**
+   * Compute real-time frequency data across 128 frequency bins at current playback position.
+   */
+  public getFrequencyData(outArray: Uint8Array<ArrayBuffer>): void {
+    if (!this.currentBuffer || this.audioElement.paused) {
+      outArray.fill(0);
+      return;
+    }
+
+    const channelData = this.currentBuffer.getChannelData(0);
+    const sampleRate = this.currentBuffer.sampleRate;
+    const currentSample = Math.floor(this.audioElement.currentTime * sampleRate);
+    const N = 128;
+
+    // Fast discrete spectral energy calculation with Hann windowing
+    for (let k = 0; k < N; k++) {
+      let real = 0;
+      let imag = 0;
+      const step = 2;
+
+      for (let n = 0; n < N; n++) {
+        const idx = currentSample + n * step;
+        const sample = idx >= 0 && idx < channelData.length ? channelData[idx] : 0;
+        // Hann window
+        const window = 0.5 * (1 - Math.cos((2 * Math.PI * n) / (N - 1)));
+        const windowedSample = sample * window;
+
+        const angle = (2 * Math.PI * k * n) / N;
+        real += windowedSample * Math.cos(angle);
+        imag -= windowedSample * Math.sin(angle);
+      }
+
+      const mag = Math.sqrt(real * real + imag * imag);
+      // Logarithmic / perceptual scaling to 0..255
+      const scaled = Math.min(255, Math.floor(Math.sqrt(mag) * 85));
+      outArray[k] = scaled;
     }
   }
 
@@ -185,37 +326,91 @@ class AudioEngine {
     return () => this.onPlayStateChangeCbs.delete(cb);
   }
 
-  // iOS MediaSession integration
+  // iOS MediaSession integration for Dynamic Island / Lock Screen
   private setupMediaSession(track: Track) {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: track.name.replace(/\.[^/.]+$/, ''),
-        artist: 'Resample Studio',
-        album: 'Varispeed Lab',
-        artwork: [
-          {
-            src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="%2307090e"/><circle cx="256" cy="256" r="180" fill="none" stroke="%2300f0ff" stroke-width="24"/></svg>',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-          },
-        ],
-      });
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
 
-      navigator.mediaSession.setActionHandler('play', () => this.play());
-      navigator.mediaSession.setActionHandler('pause', () => this.pause());
-      navigator.mediaSession.setActionHandler('seekto', (details) => {
-        if (details.seekTime !== undefined) {
-          this.seek(details.seekTime);
-        }
-      });
+    this.currentTrack = track;
+    this.updateMediaSessionMetadata();
+
+    navigator.mediaSession.setActionHandler('play', () => this.play());
+    navigator.mediaSession.setActionHandler('pause', () => this.pause());
+    navigator.mediaSession.setActionHandler('previoustrack', () => this.restart());
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined) {
+        this.seek(details.seekTime);
+      }
+    });
+
+    try {
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+    } catch {}
+
+    this.syncPositionState(true);
+  }
+
+  private updateMediaSessionMetadata() {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator) || !this.currentTrack) {
+      return;
+    }
+
+    const cleanTitle = this.currentTrack.name.replace(/\.[^/.]+$/, '');
+    const pitchStr =
+      this.currentCents >= 0 ? `+${this.currentCents}¢` : `${this.currentCents}¢`;
+    const speedPct = `${(this.audioElement.playbackRate * 100).toFixed(1)}%`;
+    const artworkUri = generateArtworkDataUri(cleanTitle);
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: cleanTitle,
+      artist: `${speedPct} speed • ${pitchStr}`,
+      album: 'Resample Studio',
+      artwork: artworkUri
+        ? [
+            {
+              src: artworkUri,
+              sizes: '512x512',
+              type: 'image/png',
+            },
+          ]
+        : [],
+    });
+  }
+
+  private syncPositionState(force = false) {
+    if (
+      typeof navigator === 'undefined' ||
+      !('mediaSession' in navigator) ||
+      !('setPositionState' in navigator.mediaSession)
+    ) {
+      return;
+    }
+
+    const now = performance.now();
+    if (!force && now - this.lastPositionSync < 1000) {
+      return;
+    }
+    this.lastPositionSync = now;
+
+    try {
+      const dur = this.audioElement.duration || 0;
+      if (dur > 0 && !isNaN(dur)) {
+        navigator.mediaSession.setPositionState({
+          duration: Math.max(0.1, dur),
+          playbackRate: Math.max(0.1, this.audioElement.playbackRate || 1.0),
+          position: Math.max(0, Math.min(dur, this.audioElement.currentTime || 0)),
+        });
+      }
+    } catch {
+      // Ignored
     }
   }
 
   private updateMediaSessionPlaybackState(state: 'playing' | 'paused') {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = state;
-    }
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = state;
   }
 }
 
 export const audioEngine = new AudioEngine();
+
